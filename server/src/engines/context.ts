@@ -32,6 +32,12 @@ export class RunContext {
   stats: RunStats = { checks: 0, pagesTested: 0, apiCalls: 0, evalsRun: 0, evalsPassed: 0 };
   private fingerprints = new Set<string>();
   bugCount = 0;
+  /** API calls recorded while using the app (for API testing without a spec). */
+  traffic = new Map<string, import("./traffic.js").Recorded>();
+  trafficTested = new Set<string>();
+  currentModuleId: string | null = null;
+  /** What each live-view browser is doing right now (shown under the frame). */
+  liveCaption: Record<string, string> = {};
   storageState: Awaited<ReturnType<import("playwright").BrowserContext["storageState"]>> | undefined;
 
   constructor(
@@ -43,6 +49,7 @@ export class RunContext {
   ) {}
 
   async log(message: string, level: "info" | "warn" | "error" | "success" = "info") {
+    if (level === "info") this.liveCaption.app = message;
     console.log(`[run ${this.run.id}] ${level}: ${message}`);
     await logEvent(this.run.id, message, level);
   }

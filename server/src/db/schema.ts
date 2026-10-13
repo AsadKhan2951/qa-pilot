@@ -99,6 +99,8 @@ export type Run = {
   createdAt: Date;
   startedAt: Date | null;
   finishedAt: Date | null;
+  /** Latest live-view frames while running */
+  live?: Partial<Record<"app" | "reference", { path: string; url: string; caption: string; at: string }>>;
 };
 
 export type RunEvent = { id: string; runId: string; seq: number; level: "info" | "warn" | "error" | "success"; message: string; createdAt: Date };

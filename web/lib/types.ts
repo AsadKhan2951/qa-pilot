@@ -2,7 +2,7 @@ export type Suite = "ui" | "visual" | "api" | "ai";
 export const SUITES: { id: Suite; label: string; hint: string }[] = [
   { id: "ui", label: "Frontend", hint: "Every page checked, then an AI tester walks your flows" },
   { id: "visual", label: "Design match", hint: "Pixels, text, fonts and colours against Figma or a reference site" },
-  { id: "api", label: "API", hint: "Contract, auth and bad-input handling for each endpoint" },
+  { id: "api", label: "API", hint: "Every API call the app makes: errors, auth, bad input, speed" },
   { id: "ai", label: "AI answers", hint: "Your test questions, each answer graded by Claude" },
 ];
 

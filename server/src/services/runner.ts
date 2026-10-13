@@ -6,6 +6,27 @@ import { Cancelled, RunContext } from "../engines/context.js";
 import { ensureLogin, runUiSuite } from "../engines/ui.js";
 import { runVisualSuite } from "../engines/visual.js";
 import { runApiSuite } from "../engines/api.js";
+import { collectTraffic, runTrafficApiSuite } from "../engines/traffic.js";
+import { discoverPaths } from "../engines/ui.js";
+import type { RunContext as Ctx } from "../engines/context.js";
+
+/**
+ * API testing for one module. Always runs:
+ *  - with an OpenAPI spec + scopes → contract tests per endpoint
+ *  - always → tests every API call the app made while this module was being used
+ *    (if the Frontend check didn't run, the module's pages are opened just to record them)
+ */
+async function runModuleApi(ctx: Ctx, mod: Module, uiRan: boolean) {
+  if (ctx.project.openApiUrl && (mod.apiScopes.length || !mod.id)) {
+    await runApiSuite(ctx, mod.id ? mod : null);
+  }
+  const seen = [...ctx.traffic.values()].some((r) => r.moduleId === (mod.id || null));
+  if (!seen && !uiRan) {
+    await ctx.log(`Opening "${mod.name}" pages to record its API calls…`);
+    await collectTraffic(ctx, mod, mod.paths.length ? mod.paths : await discoverPaths(ctx));
+  }
+  await runTrafficApiSuite(ctx, mod.id ? mod : null);
+}
 import { runAiSuite } from "../engines/ai.js";
 import { generateReport, healthScore } from "../report/generate.js";
 
@@ -58,15 +79,16 @@ export async function executeRun(runId: string, browser: Browser) {
   let error = "";
   try {
     await ctx.log(`Started QA for ${project.name} — ${modules.length} module(s), suites: ${run.suites.join(", ")}`);
-    if (run.suites.includes("ui") || run.suites.includes("visual")) await ensureLogin(ctx);
+    if (run.suites.includes("ui") || run.suites.includes("visual") || run.suites.includes("api")) await ensureLogin(ctx);
 
     for (const mod of modules) {
       await ctx.checkCancelled();
       await ctx.log(`━━ Module: ${mod.name}${mod.mvp ? ` (${mod.mvp})` : ""}`);
+      ctx.currentModuleId = mod.id || null;
       const suites: [string, () => Promise<unknown>][] = [
         ["ui", () => runUiSuite(ctx, mod)],
         ["visual", () => runVisualSuite(ctx, mod)],
-        ["api", () => (mod.apiScopes.length || !mod.id ? runApiSuite(ctx, mod.id ? mod : null) : ctx.log(`No API scopes on "${mod.name}"`))],
+        ["api", () => runModuleApi(ctx, mod, run.suites.includes("ui"))],
         ["ai", () => (mod.id ? runAiSuite(ctx, mod) : Promise.resolve())],
       ];
       for (const [suite, fn] of suites) {
@@ -80,8 +102,18 @@ export async function executeRun(runId: string, browser: Browser) {
       }
     }
 
+    // API calls not tied to a module (login, shared endpoints)
+    if (run.suites.includes("api")) {
+      ctx.currentModuleId = null;
+      try {
+        if ([...ctx.traffic.values()].some((r) => !ctx.trafficTested.has(r.key))) await runTrafficApiSuite(ctx, null);
+      } catch (e) {
+        await ctx.log(`Shared API checks error: ${(e as Error).message}`, "error");
+      }
+    }
+
     // Whole-project run: also test endpoints that no module claims
-    if (!run.moduleId && run.suites.includes("api") && modules.some((m) => m.id && m.apiScopes.length)) {
+    if (!run.moduleId && run.suites.includes("api") && project.openApiUrl && modules.some((m) => m.id && m.apiScopes.length)) {
       try {
         await runApiSuite(ctx, null, modules.flatMap((m) => m.apiScopes));
       } catch (e) {

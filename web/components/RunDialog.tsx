@@ -13,7 +13,6 @@ const ICON = { ui: Globe, visual: PenTool, api: Server, ai: Bot } as const;
 function readiness(s: Suite, project: Project, mods: Module[]): string | null {
   if (s === "visual" && !project.referenceUrl && !(project.figmaFileKey && project.hasFigmaToken)) return "add a reference website or Figma file in Settings";
   if (s === "visual" && !mods.some((m) => m.figmaFrames.length)) return "link pages to the design in a module";
-  if (s === "api" && !project.openApiUrl) return "add the OpenAPI spec link in Settings";
   if (s === "ai" && !mods.some((m) => m.aiEvalTarget?.url)) return "set up an AI endpoint and eval cases in a module";
   return null;
 }
@@ -88,7 +87,7 @@ export function RunDialog({
                   <span className={cx("grid size-8 place-items-center rounded-[10px]", !on ? "bg-soft text-faint" : s.id === "ai" ? "bg-ai-wash text-ai" : "bg-signal-wash text-signal-ink")}><Icon size={17} /></span>
                   <span className={cx("display mt-3 text-[16px] font-bold tracking-[-0.01em]", on ? "text-ink" : "text-mute")}>{s.label}</span>
                   <span className="mt-0.5 text-[14.5px] leading-snug text-mute">{s.hint}</span>
-                  {on && warn && <span className="mt-2 text-[12px] leading-snug text-signal-ink">Skipped until you {warn}</span>}
+                  {on && warn && <span className="mt-2 text-[13px] leading-snug text-faint">Optional: nothing to compare yet. To use it, {warn}.</span>}
                 </button>
               );
             })}

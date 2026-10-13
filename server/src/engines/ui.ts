@@ -6,6 +6,8 @@ import type { RunContext } from "./context.js";
 import { PageMonitor } from "./monitor.js";
 import { checkPage } from "./checks.js";
 import { runAgent } from "./agent.js";
+import { recordTraffic } from "./traffic.js";
+import { watchContext } from "./live.js";
 
 export async function newContext(ctx: RunContext, viewport = { width: 1440, height: 900 }): Promise<BrowserContext> {
   const context = await ctx.browser.newContext({
@@ -17,6 +19,8 @@ export async function newContext(ctx: RunContext, viewport = { width: 1440, heig
   });
   // Dev builds (tsx/esbuild) wrap functions passed to page.evaluate with __name()
   await context.addInitScript("globalThis.__name = globalThis.__name || ((f) => f);");
+  recordTraffic(ctx, context);
+  watchContext(ctx, context, "app");
   return context;
 }
 

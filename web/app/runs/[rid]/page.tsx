@@ -1,7 +1,7 @@
 "use client";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, Bug as BugIcon, Download, ExternalLink, Globe, PenTool, Server, Square, X } from "lucide-react";
+import { Bot, Bug as BugIcon, Download, ExternalLink, Globe, MonitorPlay, PenTool, Server, Square, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button, Empty, ErrorNote, Gauge, PageHeader, Panel, SEV_LABEL, SeverityBadge, Spinner, StatusBadge, Tag, cx, sevBg, timeAgo } from "@/components/ui";
 import { api, useApi } from "@/lib/api";
@@ -31,7 +31,8 @@ export default function RunPage() {
   const [sev, setSev] = useState<string>("all");
   const [suite, setSuite] = useState<string>("all");
   const [selected, setSelected] = useState<Bug | null>(null);
-  const [view, setView] = useState<"bugs" | "log">("bugs");
+  const [view, setView] = useState<"live" | "bugs" | "log">("bugs");
+  const [watchedRunning, setWatchedRunning] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
 
   const running = run.data ? ["queued", "running"].includes(run.data.status) : false;
@@ -69,7 +70,11 @@ export default function RunPage() {
   }, [events.length, view]);
 
   useEffect(() => {
-    if (running && bugs.data && !bugs.data.length) setView("log");
+    // Open the live view automatically while a run is in progress
+    if (running && !watchedRunning) {
+      setView("live");
+      setWatchedRunning(true);
+    }
   }, [running, bugs.data]);
 
   useEffect(() => {
@@ -228,7 +233,7 @@ export default function RunPage() {
 
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-3">
         <div className="flex rounded-full border border-line bg-panel p-1" role="tablist">
-          {(["bugs", "log"] as const).map((v) => (
+          {(["live", "bugs", "log"] as const).map((v) => (
             <button
               key={v}
               role="tab"
@@ -236,7 +241,16 @@ export default function RunPage() {
               onClick={() => setView(v)}
               className={cx("rounded-full px-3.5 py-1.5 text-[14px] font-semibold transition-colors", view === v ? "bg-ink text-white" : "text-mute hover:text-ink")}
             >
-              {v === "bugs" ? `Issues (${all.length})` : "Live log"}
+              {v === "live" ? (
+                <span className="inline-flex items-center gap-1.5">
+                  {running && <span className="size-1.5 animate-pulse rounded-full bg-signal" />}
+                  Live view
+                </span>
+              ) : v === "bugs" ? (
+                `Issues (${all.length})`
+              ) : (
+                "Log"
+              )}
             </button>
           ))}
         </div>
@@ -271,7 +285,9 @@ export default function RunPage() {
         </div>
       </div>
 
-      {view === "log" ? (
+      {view === "live" ? (
+        <LiveView runId={rid} running={running} />
+      ) : view === "log" ? (
         <div ref={logRef} className="deck scroll-thin h-[58vh] overflow-y-auto rounded-[20px] bg-deck p-6 font-mono text-[14.5px] leading-[1.75]">
           {events.map((e) => (
             <div key={e.id} className={cx("grid grid-cols-[76px_1fr] gap-3", LEVEL[e.level])}>
@@ -285,7 +301,9 @@ export default function RunPage() {
         running ? (
           <Empty icon={<span className="block size-5 animate-spin rounded-full border-2 border-signal border-r-transparent" />} title="Testing…" desc="Issues show up here the moment they're found." />
         ) : (
-          <Empty icon={<BugIcon size={20} />} title={all.length ? "Nothing matches these filters" : "No issues found"} desc={all.length ? "Clear the filters to see every issue." : "Every check in this run passed."} />
+          <Empty icon={<BugIcon size={20} />} title={all.length ? "Nothing matches these filters" : r.status === "cancelled" ? "Run stopped before finding anything" : r.status === "error" ? "Run didn't finish" : "No issues found"}
+            desc={all.length ? "Clear the filters to see every issue." : r.status === "cancelled" ? "Start a new run to test this module." : r.status === "error" ? "Open the Log tab to see what went wrong." : "Every check in this run passed."}
+          />
         )
       ) : (
         <Panel className="divide-y divide-line overflow-hidden">
@@ -389,5 +407,73 @@ export default function RunPage() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+
+type Frame = { src: string; url: string; caption: string; at: string };
+
+/** Side-by-side live screens: the product being tested and the reference it is compared with. */
+function LiveView({ runId, running }: { runId: string; running: boolean }) {
+  const [frames, setFrames] = useState<Partial<Record<"app" | "reference", Frame>>>({});
+  useEffect(() => {
+    let stop = false;
+    async function tick() {
+      try {
+        const f = await api<Partial<Record<"app" | "reference", Frame>>>(`/runs/${runId}/live`);
+        if (!stop) setFrames(f);
+      } catch {
+        /* ignore */
+      }
+    }
+    tick();
+    if (!running) return () => void (stop = true);
+    const id = setInterval(tick, 1500);
+    return () => {
+      stop = true;
+      clearInterval(id);
+    };
+  }, [runId, running]);
+
+  const panels: { key: "app" | "reference"; title: string; empty: string }[] = [
+    { key: "app", title: "Your app", empty: running ? "Starting the browser…" : "No live frames were recorded for this run." },
+    { key: "reference", title: "Reference", empty: "Shows here when the run compares a page with your reference site or Figma." },
+  ];
+  const showRef = Boolean(frames.reference);
+  return (
+    <div className={cx("grid gap-4", showRef && "xl:grid-cols-2")}>
+      {panels
+        .filter((p) => p.key === "app" || showRef)
+        .map((p) => {
+          const f = frames[p.key];
+          const stale = f ? Date.now() - new Date(f.at).getTime() > 8000 : true;
+          return (
+            <div key={p.key} className="overflow-hidden rounded-[20px] border border-line bg-panel">
+              <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+                <span className={cx("size-2 shrink-0 rounded-full", running && !stale ? "animate-pulse bg-signal" : "bg-[#cfd3c9]")} />
+                <span className="display text-[16px] font-bold">{p.title}</span>
+                {f?.url && (
+                  <a href={f.url} target="_blank" rel="noreferrer" className="ml-auto min-w-0 truncate rounded-full bg-soft px-3 py-1 font-mono text-[12px] text-mute hover:text-ink">
+                    {f.url}
+                  </a>
+                )}
+              </div>
+              <div className="relative aspect-[16/10] bg-soft">
+                {f ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={f.src} alt={`${p.title} live screen`} className="absolute inset-0 h-full w-full object-contain object-top" />
+                ) : (
+                  <div className="absolute inset-0 grid place-items-center px-8 text-center text-[14.5px] text-mute">
+                    <span className="flex items-center gap-2">
+                      <MonitorPlay size={18} /> {p.empty}
+                    </span>
+                  </div>
+                )}
+              </div>
+              {f?.caption && <div className="truncate border-t border-line px-4 py-2.5 text-[14px] text-mute">{f.caption}</div>}
+            </div>
+          );
+        })}
+    </div>
   );
 }

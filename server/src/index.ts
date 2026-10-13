@@ -28,7 +28,8 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof HttpError) return res.status(err.status).json({ error: err.message });
   if ((err as { status?: number })?.status === 404) return res.status(404).json({ error: "Not found" });
   console.error(err);
-  res.status(500).json({ error: "Internal server error" });
+  const msg = err instanceof Error ? err.message : String(err);
+  res.status(500).json({ error: `Server error: ${msg.slice(0, 200)}` });
 });
 
 await connectDb();

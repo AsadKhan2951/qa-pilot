@@ -18,6 +18,16 @@ runsRouter.get("/runs/:id", async (req, res) => {
   });
 });
 
+/** Latest live-view frames (app + reference) for a running run */
+runsRouter.get("/runs/:id/live", async (req, res) => {
+  const { run } = await loadRunFor(req.user!.id, req.params.id);
+  const live = run.live ?? {};
+  const out: Record<string, unknown> = {};
+  for (const [k, f] of Object.entries(live)) if (f) out[k] = { ...f, src: `/api/artifacts/${f.path}?t=${encodeURIComponent(f.at)}` };
+  res.setHeader("Cache-Control", "no-store");
+  res.json(out);
+});
+
 /** Incremental live log: ?after=<seq> */
 runsRouter.get("/runs/:id/events", async (req, res) => {
   const { run } = await loadRunFor(req.user!.id, req.params.id);
@@ -78,6 +88,6 @@ runsRouter.get("/runs/:id/report.:ext", async (req, res) => {
 runsRouter.get("/artifacts/runs/:runId/*rest", async (req, res) => {
   await loadRunFor(req.user!.id, req.params.runId);
   const rest = (req.params as unknown as { rest: string[] }).rest.join("/");
-  res.setHeader("Cache-Control", "private, max-age=86400");
+  res.setHeader("Cache-Control", rest.startsWith("live/") ? "no-store" : "private, max-age=86400");
   res.sendFile(artifactPath(`runs/${req.params.runId}/${rest}`), { dotfiles: "allow" });
 });

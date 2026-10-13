@@ -9,7 +9,7 @@ import { Button, ErrorNote, Field, Input, Modal, PageHeader, Panel, SectionTitle
 import { api, useApi } from "@/lib/api";
 import type { EvalCase, FigmaFrame, Module, Project, RunRow } from "@/lib/types";
 
-function Block({ id, icon, title, desc, ready, children }: { id: string; icon: ReactNode; title: string; desc: string; ready?: boolean; children: ReactNode }) {
+function Block({ id, icon, title, desc, ready, status, children }: { id: string; icon: ReactNode; title: string; desc: string; ready?: boolean; status?: string; children: ReactNode }) {
   return (
     <Panel className="scroll-mt-6">
       <section id={id}>
@@ -20,7 +20,7 @@ function Block({ id, icon, title, desc, ready, children }: { id: string; icon: R
             <p className="mt-0.5 max-w-[72ch] text-[14px] text-mute">{desc}</p>
           </div>
           {ready !== undefined && (
-            <span className={cx("mt-0.5 shrink-0 text-[14.5px] font-medium", ready ? "text-clear" : "text-faint")}>{ready ? "Ready" : "Not set up"}</span>
+            <span className={cx("mt-0.5 shrink-0 text-[14.5px] font-medium", ready ? "text-clear" : "text-faint")}>{status ?? (ready ? "Ready" : "Optional")}</span>
           )}
         </div>
         <div className="px-6 py-5">{children}</div>
@@ -137,7 +137,7 @@ export default function ModulePage() {
     { id: "overview", label: "Overview" },
     { id: "frontend", label: "Frontend", ready: true },
     { id: "figma", label: "Design match", ready: frames.some((f) => f.path && (f.nodeId || f.source === "site")) },
-    { id: "api", label: "API", ready: Boolean(scopes.trim()) },
+    { id: "api", label: "API", ready: true },
     { id: "ai", label: "AI answers", ready: Boolean(target.url) && evalCases.length > 0 },
   ];
   const moduleRuns = runs.data?.filter((r) => r.moduleId === m.id) ?? [];
@@ -292,13 +292,20 @@ export default function ModulePage() {
           </p>
         </Block>
 
-        <Block id="api" ready={Boolean(scopes.trim())} icon={<Server size={17} />} title="API" desc="Pick the endpoints from your OpenAPI spec that belong to this module. Each one is tested for its contract, auth, bad input, server errors and speed.">
-          <Field label="API scopes" hint="OpenAPI tags (e.g. leave) or path prefixes (e.g. /api/leave), comma-separated.">
+        <Block
+          id="api"
+          ready
+          status={scopes.trim() ? "Ready + spec" : "Automatic"}
+          icon={<Server size={17} />}
+          title="API"
+          desc="Works with nothing to set up: every API call the app makes on this module's pages is recorded and tested for server errors, access without login, bad input, leaks and speed. Optionally add OpenAPI scopes below for contract checks too."
+        >
+          <Field label="OpenAPI scopes (optional)" hint="Only if you added an OpenAPI spec in Settings: tags (e.g. leave) or path prefixes (e.g. /api/leave), comma-separated.">
             <Input value={scopes} onChange={(e) => setScopes(e.target.value)} placeholder="leave, /api/approvals" />
           </Field>
         </Block>
 
-        <Block id="ai" ready={Boolean(target.url) && evalCases.length > 0} icon={<Bot size={17} />} title="AI answers" desc="For AI features. Your test questions go to the AI endpoint and Claude grades each answer for accuracy, made-up facts, language, safety and format.">
+        <Block id="ai" ready={Boolean(target.url) && evalCases.length > 0} icon={<Bot size={17} />} title="AI answers" desc="Optional, only for modules with an AI feature (chat, suggestions). Your test questions go to the AI endpoint and Claude grades each answer for accuracy, made-up facts, language, safety and format. Leave empty to skip.">
           <div className="grid gap-4 md:grid-cols-[110px_1fr]">
             <Field label="Method">
               <Select value={target.method ?? "POST"} onChange={(e) => setTarget({ method: e.target.value })}>

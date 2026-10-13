@@ -19,6 +19,8 @@ const pages = {
     <script>
       document.getElementById('rev').innerText = 'Rs ' + (undefined * 3);
       fetch('/api/stats').then(r => r.json()).then(d => console.log(d));
+      const auth = { headers: { Authorization: 'Bearer demo-token' } };
+      fetch('/api/users', auth).then(r => r.json()).then(u => fetch('/api/users/' + u[0].id, auth));
       setTimeout(() => { null.crash(); }, 100);
     </script>`),
   "/settings": layout("Settings", `<h1>Settings</h1><form onsubmit="event.preventDefault();document.getElementById('m').innerText='Profile updated for ' + this.email.value">

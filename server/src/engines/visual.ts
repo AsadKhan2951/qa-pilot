@@ -11,6 +11,7 @@ import { aiEnabled, askJson, imageBlock, textBlock } from "../lib/claude.js";
 import { env } from "../lib/env.js";
 import type { RunContext, Severity } from "./context.js";
 import { newContext } from "./ui.js";
+import { watchContext } from "./live.js";
 
 type Box = { x: number; y: number; w: number; h: number };
 type SpecText = { text: string; font?: string; size?: number; weight?: number; color?: string; box: Box };
@@ -214,6 +215,8 @@ function referenceUrl(ctx: RunContext, frame: FigmaFrame) {
 async function loadSiteReference(ctx: RunContext, frame: FigmaFrame, width = 1440): Promise<Reference> {
   const url = referenceUrl(ctx, frame);
   const context = await ctx.browser.newContext({ viewport: { width, height: 1000 }, ignoreHTTPSErrors: true });
+  ctx.liveCaption.reference = `Reference: ${frame.label || frame.path}`;
+  watchContext(ctx, context, "reference");
   await context.addInitScript("globalThis.__name = globalThis.__name || ((f) => f);");
   const page = await context.newPage();
   try {

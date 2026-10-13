@@ -19,7 +19,7 @@ function Coverage({ m, autoPages }: { m: Module; autoPages: boolean }) {
     { on: m.paths.length > 0 || autoPages, icon: Globe, label: m.paths.length ? `${m.paths.length} page${m.paths.length === 1 ? "" : "s"}` : autoPages ? "Auto pages" : "No pages" },
     { on: Boolean(m.userFlows.trim()), icon: ListChecks, label: m.userFlows.trim() ? `${m.userFlows.trim().split("\n").length} flows` : "No flows" },
     { on: m.figmaFrames.length > 0, icon: PenTool, label: m.figmaFrames.length ? `${m.figmaFrames.length} design ref${m.figmaFrames.length === 1 ? "" : "s"}` : "No design ref" },
-    { on: m.apiScopes.length > 0, icon: Server, label: m.apiScopes.length ? `API: ${m.apiScopes.join(", ")}` : "No API" },
+    { on: true, icon: Server, label: m.apiScopes.length ? `API: ${m.apiScopes.join(", ")}` : "API auto" },
     { on: Boolean(m.aiEvalTarget?.url), icon: Bot, label: m.aiEvalTarget?.url ? "AI evals" : "No AI evals" },
   ];
   return (

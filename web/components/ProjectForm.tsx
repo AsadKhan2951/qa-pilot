@@ -176,7 +176,7 @@ export function ProjectForm({
         </div>
       </Section>
 
-      <Section icon={<Server size={17} />} title="API" desc="Optional. Link your OpenAPI (Swagger) spec and every endpoint gets tested.">
+      <Section icon={<Server size={17} />} title="API" desc="Optional. APIs are tested automatically from the app's own calls. Add an OpenAPI (Swagger) spec only if you want contract checks for every endpoint.">
         <Field label="OpenAPI spec URL">
           <Input type="url" value={f.openApiUrl} onChange={(e) => set("openApiUrl", e.target.value)} placeholder="https://api.myapp.com/openapi.json" />
         </Field>
