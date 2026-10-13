@@ -1,0 +1,78 @@
+@import "tailwindcss";
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource-variable/instrument-sans";
+@import "@fontsource-variable/jetbrains-mono";
+
+/* QA Pilot — same family as Now / heard portal
+   deck   = green-tinted ink chrome     hangar = warm off-white canvas
+   signal = Now orange (#ff4b1f → #ff9068), used for the main action and "hold"
+   ai     = Wingman indigo, used only where AI is doing the work */
+@theme {
+  --font-sans: "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Instrument Sans Variable", sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, Menlo, monospace;
+
+  --color-deck: #10140f;
+  --color-deck-2: #1c221a;
+  --color-deck-line: #2b3328;
+  --color-deck-text: #a3aa9c;
+  --color-hangar: #f5f6f3;
+  --color-panel: #ffffff;
+  --color-ink: #10140f;
+  --color-mute: #5b6258;
+  --color-faint: #8a9186;
+  --color-line: #e4e6df;
+  --color-soft: #f1f2ed;
+  --color-signal: #ff4b1f;
+  --color-signal-2: #ff9068;
+  --color-signal-ink: #c2340f;
+  --color-signal-wash: #fff1eb;
+  --color-ai: #4233e0;
+  --color-ai-wash: #eeedff;
+  --color-clear: #17865f;
+  --color-clear-wash: #e6f4ec;
+  --color-fault: #c8102e;
+  --color-fault-wash: #fdecee;
+  --color-sev-critical: #c8102e;
+  --color-sev-high: #f0721f;
+  --color-sev-medium: #c99a06;
+  --color-sev-low: #4f7cc4;
+}
+
+html, body { background: var(--color-hangar); color: var(--color-ink); }
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, .display { font-family: var(--font-display); font-optical-sizing: auto; }
+.tnum { font-variant-numeric: tabular-nums; }
+.grad { background-image: linear-gradient(135deg, var(--color-signal), var(--color-signal-2)); }
+.grad-text { background: linear-gradient(135deg, var(--color-signal), var(--color-signal-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.label { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; }
+::selection { background: #ffd2c2; }
+:focus-visible { outline: 2px solid var(--color-signal); outline-offset: 2px; }
+.scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: #cfd3c9; border-radius: 8px; }
+.deck .scroll-thin::-webkit-scrollbar-thumb, .deck.scroll-thin::-webkit-scrollbar-thumb { background: #2f382c; }
+
+@keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+.running-sweep { position: relative; overflow: hidden; }
+.running-sweep::after {
+  content: ""; position: absolute; inset: 0; width: 40%; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,75,31,.22), transparent);
+  animation: sweep 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .running-sweep::after, .animate-spin, .animate-pulse { animation: none !important; }
+}
+
+/* Login: scan line passing over the inspected page */
+@keyframes qa-scan { 0% { transform: translateY(-40%); opacity: 0; } 10% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translateY(520%); opacity: 0; } }
+.qa-scan {
+  background: linear-gradient(180deg, transparent, rgba(255,75,31,.10) 70%, rgba(255,75,31,.55) 98%, transparent);
+  border-bottom: 2px solid rgba(255,75,31,.8);
+  animation: qa-scan 3.6s cubic-bezier(.45,.05,.35,1) infinite;
+}
+@media (prefers-reduced-motion: reduce) { .qa-scan { animation: none; opacity: 0; } }

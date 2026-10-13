@@ -1,0 +1,29 @@
+# .github/workflows/qa.yml — run QA Pilot after deploying to staging,
+# and fail the pipeline if critical bugs are found.
+name: QA
+on:
+  workflow_run:
+    workflows: ["Deploy staging"]
+    types: [completed]
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Trigger QA Pilot and wait
+        env:
+          QA_URL: ${{ secrets.QA_PILOT_URL }}      # e.g. https://qa.yourcompany.com
+          QA_TOKEN: ${{ secrets.QA_PILOT_TOKEN }}  # project Settings → CI / webhook
+        run: |
+          RUN=$(curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d '{"suites":["ui","api","ai"]}' "$QA_URL/api/hooks/trigger/$QA_TOKEN" | jq -r .runId)
+          echo "QA run: $QA_URL/runs/$RUN"
+          for i in $(seq 1 120); do
+            S=$(curl -fsS "$QA_URL/api/hooks/status/$QA_TOKEN/$RUN")
+            STATUS=$(echo "$S" | jq -r .status)
+            case "$STATUS" in queued|running) sleep 15 ;; *) break ;; esac
+          done
+          echo "$S" | jq .
+          CRIT=$(echo "$S" | jq -r '.stats.bySeverity.critical // 0')
+          if [ "$CRIT" -gt 0 ]; then echo "::error::$CRIT critical bug(s) — see $QA_URL/runs/$RUN"; exit 1; fi

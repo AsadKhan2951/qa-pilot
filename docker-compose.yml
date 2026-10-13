@@ -1,0 +1,72 @@
+# QA Pilot — one-droplet deployment (DigitalOcean)
+#   1) cp .env.example .env   and fill it in
+#   2) docker compose up -d --build
+# Using DigitalOcean Managed MongoDB (or Atlas) instead of the bundled one?
+#   set MONGODB_URI in .env and run:  docker compose up -d --build --scale mongo=0
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: qapilot
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes: [mongodata:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+
+  api:
+    build: ./server
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MONGODB_URI: ${MONGODB_URI:-mongodb://qapilot:${MONGO_PASSWORD}@mongo:27017/qapilot?authSource=admin}
+      REDIS_URL: redis://redis:6379
+      ARTIFACTS_DIR: /data/artifacts
+    volumes: [artifacts:/data/artifacts]
+    depends_on:
+      redis: { condition: service_started }
+
+  worker:
+    build: ./server
+    command: ["node", "dist/worker.js"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MONGODB_URI: ${MONGODB_URI:-mongodb://qapilot:${MONGO_PASSWORD}@mongo:27017/qapilot?authSource=admin}
+      REDIS_URL: redis://redis:6379
+      ARTIFACTS_DIR: /data/artifacts
+    volumes: [artifacts:/data/artifacts]
+    shm_size: "1gb" # Chromium needs shared memory
+    depends_on: [api]
+
+  web:
+    build:
+      context: ./web
+      args: { API_URL: "http://api:4000" }
+    restart: unless-stopped
+    depends_on: [api]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+    depends_on: [web]
+
+volumes:
+  mongodata:
+  redisdata:
+  artifacts:
+  caddydata:
