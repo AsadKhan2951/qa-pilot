@@ -190,7 +190,7 @@ export default function RunPage() {
               )}
             />
             <div>
-              <h2 className={cx("text-[44px] leading-[1.02] font-extrabold tracking-[-0.04em]", verdict.tone === "hold" && "grad-text")}>{verdict.title}</h2>
+              <h2 className={cx("text-[44px] leading-[1.02] font-bold tracking-[-0.04em]", verdict.tone === "hold" && "grad-text")}>{verdict.title}</h2>
               <p className="mt-2 max-w-[56ch] text-[15px] text-deck-text">{verdict.sub}</p>
             </div>
           </div>
@@ -216,11 +216,11 @@ export default function RunPage() {
                 sev === s && "bg-deck-2",
               )}
             >
-              <span className="flex items-center gap-2 text-[13.5px] text-deck-text group-hover:text-white">
+              <span className="flex items-center gap-2 text-[14.5px] text-deck-text group-hover:text-white">
                 <span className={cx("size-2.5 rounded-full", sevBg(s))} />
                 {SEV_LABEL[s]}
               </span>
-              <span className={cx("display tnum text-[30px] font-extrabold", counts[s] ? "text-white" : "text-[#4a5346]")}>{counts[s]}</span>
+              <span className={cx("display tnum text-[30px] font-bold", counts[s] ? "text-white" : "text-[#4a5346]")}>{counts[s]}</span>
             </button>
           ))}
         </div>
@@ -234,7 +234,7 @@ export default function RunPage() {
               role="tab"
               aria-selected={view === v}
               onClick={() => setView(v)}
-              className={cx("rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors", view === v ? "bg-ink text-white" : "text-mute hover:text-ink")}
+              className={cx("rounded-full px-3.5 py-1.5 text-[14px] font-semibold transition-colors", view === v ? "bg-ink text-white" : "text-mute hover:text-ink")}
             >
               {v === "bugs" ? `Issues (${all.length})` : "Live log"}
             </button>
@@ -248,7 +248,7 @@ export default function RunPage() {
                 onClick={() => setSuite(s.id)}
                 aria-pressed={suite === s.id}
                 className={cx(
-                  "rounded-full border px-3 py-1 text-[13px] transition-colors",
+                  "rounded-full border px-3 py-1 text-[14px] transition-colors",
                   suite === s.id ? "border-ink bg-ink text-white" : "border-line bg-panel text-mute hover:text-ink",
                 )}
               >
@@ -256,13 +256,13 @@ export default function RunPage() {
               </button>
             ))}
             {sev !== "all" && (
-              <button onClick={() => setSev("all")} className="ml-1 inline-flex items-center gap-1 rounded-full bg-signal-wash px-2.5 py-1 text-[13px] text-signal-ink">
+              <button onClick={() => setSev("all")} className="ml-1 inline-flex items-center gap-1 rounded-full bg-signal-wash px-2.5 py-1 text-[14px] text-signal-ink">
                 {SEV_LABEL[sev]} only <X size={12} />
               </button>
             )}
           </div>
         )}
-        <div className="ml-auto text-[12.5px] text-mute">
+        <div className="ml-auto text-[14.5px] text-mute">
           <span className="tnum">{r.stats.pagesTested ?? 0}</span> pages, <span className="tnum">{r.stats.apiCalls ?? 0}</span> API calls,{" "}
           <span className="tnum">
             {r.stats.evalsPassed ?? 0} of {r.stats.evalsRun ?? 0}
@@ -272,7 +272,7 @@ export default function RunPage() {
       </div>
 
       {view === "log" ? (
-        <div ref={logRef} className="deck scroll-thin h-[58vh] overflow-y-auto rounded-[20px] bg-deck p-6 font-mono text-[12.5px] leading-[1.75]">
+        <div ref={logRef} className="deck scroll-thin h-[58vh] overflow-y-auto rounded-[20px] bg-deck p-6 font-mono text-[14.5px] leading-[1.75]">
           {events.map((e) => (
             <div key={e.id} className={cx("grid grid-cols-[76px_1fr] gap-3", LEVEL[e.level])}>
               <span className="tnum text-[#5f675b]">{new Date(e.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
@@ -314,7 +314,7 @@ export default function RunPage() {
                 </span>
                 <span className="min-w-0">
                   <span className="line-clamp-2 text-[14px] leading-snug font-medium text-ink">{b.title}</span>
-                  <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-mute">
+                  <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14.5px] text-mute">
                     <SeverityBadge s={b.severity} />
                     <span className="inline-flex items-center gap-1">
                       <Icon size={12} /> {b.category}
@@ -323,7 +323,7 @@ export default function RunPage() {
                     {b.url && <span className="max-w-[260px] truncate font-mono text-[11.5px] text-faint">{shortUrl(b.url)}</span>}
                   </span>
                 </span>
-                <span className="hidden justify-self-end text-[12.5px] text-mute sm:block">{BUG_STATUS[b.status]}</span>
+                <span className="hidden justify-self-end text-[14.5px] text-mute sm:block">{BUG_STATUS[b.status]}</span>
               </button>
             );
           })}
@@ -372,13 +372,13 @@ export default function RunPage() {
                 .filter(([, v]) => v)
                 .map(([k, v, accent]) => (
                   <div key={k}>
-                    <div className="mb-1.5 text-[13px] font-semibold">{k}</div>
+                    <div className="mb-1.5 text-[14px] font-semibold">{k}</div>
                     <pre className={cx("scroll-thin max-h-64 overflow-auto rounded-[12px] border-l-[3px] bg-soft p-3.5 font-mono text-[12px] leading-relaxed break-words whitespace-pre-wrap", accent || "border-l-line")}>{v}</pre>
                   </div>
                 ))}
             </div>
             <div className="flex flex-wrap items-center gap-2 border-t border-line bg-soft px-6 py-4">
-              <span className="mr-1 text-[13px] text-mute">Status</span>
+              <span className="mr-1 text-[14px] text-mute">Status</span>
               {(["open", "fixed", "wontfix", "duplicate"] as const).map((s) => (
                 <Button key={s} size="sm" variant={selected.status === s ? "primary" : "secondary"} onClick={() => setBugStatus(selected, s)}>
                   {BUG_STATUS[s]}

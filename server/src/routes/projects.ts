@@ -16,11 +16,14 @@ export const SUITES = ["ui", "visual", "api", "ai"] as const;
 export function publicProject(p: Project) {
   const creds = decrypt<Credentials>(p.credentialsEnc);
   const apiAuth = decrypt<ApiAuth>(p.apiAuthEnc);
-  const { credentialsEnc, figmaTokenEnc, apiAuthEnc, ...rest } = p;
+  const { credentialsEnc, figmaTokenEnc, apiAuthEnc, referencePasscodeEnc, ...rest } = p;
   return {
     ...rest,
     credentials: { username: creds?.username ?? "", hasPassword: Boolean(creds?.password), notes: creds?.notes ?? "" },
     hasFigmaToken: Boolean(figmaTokenEnc),
+    referenceUrl: p.referenceUrl ?? "",
+    referenceNotes: p.referenceNotes ?? "",
+    hasReferencePasscode: Boolean(referencePasscodeEnc),
     apiAuth: { headerName: apiAuth?.headerName ?? "", hasValue: Boolean(apiAuth?.headerValue) },
   };
 }
@@ -37,6 +40,10 @@ const projectInput = z.object({
     .optional(),
   figmaFileKey: z.string().optional(),
   figmaToken: z.string().optional(),
+  referenceUrl: url.optional(),
+  referencePasscode: z.string().optional(),
+  clearReferencePasscode: z.boolean().optional(),
+  referenceNotes: z.string().max(1000).optional(),
   openApiUrl: url.optional(),
   apiBaseUrl: url.optional(),
   apiAuth: z.object({ headerName: z.string().optional(), headerValue: z.string().optional() }).optional(),
@@ -57,7 +64,7 @@ function figmaKey(v?: string) {
 
 function toColumns(body: Partial<z.infer<typeof projectInput>>, existing?: Project) {
   const cols: Partial<Project> = {};
-  for (const k of ["name", "description", "techStack", "baseUrl", "loginUrl", "openApiUrl", "apiBaseUrl", "apiTestMode", "scheduleCron", "scheduleSuites"] as const) {
+  for (const k of ["name", "description", "techStack", "baseUrl", "loginUrl", "openApiUrl", "apiBaseUrl", "apiTestMode", "scheduleCron", "scheduleSuites", "referenceUrl", "referenceNotes"] as const) {
     if (body[k] !== undefined) (cols as Record<string, unknown>)[k] = body[k];
   }
   if (body.figmaFileKey !== undefined) cols.figmaFileKey = figmaKey(body.figmaFileKey);
@@ -72,6 +79,8 @@ function toColumns(body: Partial<z.infer<typeof projectInput>>, existing?: Proje
     cols.credentialsEnc = merged.username || merged.password ? encrypt(merged) : "";
   }
   if (body.figmaToken) cols.figmaTokenEnc = encrypt(body.figmaToken);
+  if (body.referencePasscode) cols.referencePasscodeEnc = encrypt(body.referencePasscode);
+  if (body.clearReferencePasscode) cols.referencePasscodeEnc = "";
   if (body.apiAuth) {
     const old = existing ? decrypt<ApiAuth>(existing.apiAuthEnc) ?? {} : {};
     const merged: ApiAuth = {
@@ -145,7 +154,9 @@ export const moduleInput = z.object({
   position: z.number().int().optional(),
   paths: z.array(z.string()).optional(),
   userFlows: z.string().max(10000).optional(),
-  figmaFrames: z.array(z.object({ path: z.string(), nodeId: z.string(), label: z.string().optional() })).optional(),
+  figmaFrames: z
+    .array(z.object({ path: z.string(), nodeId: z.string(), label: z.string().optional(), source: z.enum(["figma", "site"]).optional() }))
+    .optional(),
   apiScopes: z.array(z.string()).optional(),
   aiEvalTarget: z
     .object({

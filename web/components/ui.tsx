@@ -20,8 +20,8 @@ export function Button({
       {...p}
       disabled={p.disabled || loading}
       className={cx(
-        "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full font-semibold whitespace-nowrap transition-[filter,background-color,border-color,color] disabled:cursor-not-allowed disabled:opacity-50",
-        size === "sm" ? "h-8 px-3.5 text-[13px]" : "h-10 px-5 text-[14px]",
+        "inline-flex shrink-0 items-center justify-center gap-1.5 font-bold whitespace-nowrap transition-[filter,background-color,border-color,color] disabled:cursor-not-allowed disabled:opacity-50",
+        size === "sm" ? "h-9 rounded-[11px] px-3.5 text-[13.5px] font-semibold" : "h-12 rounded-[14px] px-5 text-[15px]",
         variant === "primary" && "grad text-ink hover:brightness-105 active:brightness-95",
         variant === "signal" && "bg-ink text-white hover:bg-deck-2",
         variant === "secondary" && "border border-line bg-panel text-ink hover:border-[#cbcfc4] hover:bg-soft",
@@ -37,10 +37,10 @@ export function Button({
 }
 
 const field =
-  "w-full rounded-[14px] border border-line bg-panel px-3.5 py-2.5 text-[14px] text-ink outline-none transition-[border,box-shadow] placeholder:text-faint hover:border-[#cbcfc4] focus:border-signal focus:shadow-[0_0_0_4px_rgba(255,75,31,.14)]";
+  "w-full rounded-[14px] border border-[#c9cfc4] bg-panel px-4 py-3 text-[16px] text-ink outline-none transition-[border,box-shadow] placeholder:text-faint hover:border-[#cbcfc4] focus:border-signal focus:shadow-[0_0_0_4px_rgba(255,75,31,.14)]";
 
 export function Input(p: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...p} className={cx(field, "h-11", p.className)} />;
+  return <input {...p} className={cx(field, "h-[52px] py-0", p.className)} />;
 }
 
 export function Textarea(p: TextareaHTMLAttributes<HTMLTextAreaElement>) {
@@ -48,15 +48,15 @@ export function Textarea(p: TextareaHTMLAttributes<HTMLTextAreaElement>) {
 }
 
 export function Select(p: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...p} className={cx(field, "h-11 py-0 pr-8", p.className)} />;
+  return <select {...p} className={cx(field, "h-[52px] py-0 pr-8", p.className)} />;
 }
 
 export function Field({ label, hint, children, className }: { label: string; hint?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <label className={cx("block", className)}>
-      <span className="mb-1.5 block text-[13px] font-medium text-ink">{label}</span>
+      <span className="mb-2 block text-[14px] font-semibold text-ink">{label}</span>
       {children}
-      {hint && <span className="mt-1.5 block text-[12.5px] leading-snug text-mute">{hint}</span>}
+      {hint && <span className="mt-1.5 block text-[13.5px] leading-snug text-mute">{hint}</span>}
     </label>
   );
 }
@@ -71,8 +71,8 @@ export function SectionTitle({ title, desc, action }: { title: string; desc?: st
   return (
     <div className="mb-3 flex items-end justify-between gap-4">
       <div>
-        <h2 className="text-[18px] font-bold tracking-[-0.02em]">{title}</h2>
-        {desc && <p className="mt-0.5 max-w-[68ch] text-[13px] text-mute">{desc}</p>}
+        <h2 className="text-[20px] font-bold tracking-[-0.03em]">{title}</h2>
+        {desc && <p className="mt-1 max-w-[68ch] text-[14.5px] text-mute">{desc}</p>}
       </div>
       {action}
     </div>
@@ -84,8 +84,8 @@ export function PageHeader({ title, subtitle, actions, meta }: { title: ReactNod
     <div className="mb-7 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
       <div className="min-w-0">
         {meta && <div className="mb-2 flex flex-wrap items-center gap-2 text-[13px] text-mute">{meta}</div>}
-        <h1 className="text-[34px] leading-[1.05] font-extrabold tracking-[-0.035em] text-ink">{title}</h1>
-        {subtitle && <div className="mt-1.5 max-w-[70ch] text-[14px] text-mute">{subtitle}</div>}
+        <h1 className="text-[34px] leading-[1.05] font-bold tracking-[-0.035em] text-ink">{title}</h1>
+        {subtitle && <div className="mt-2 max-w-[70ch] text-[15px] text-mute">{subtitle}</div>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -153,7 +153,7 @@ export function Gauge({ score, size = "md", tone = "light" }: { score: number | 
   }[size];
   return (
     <div className={cx("flex items-center", size === "lg" ? "gap-4" : "gap-2")} title={`Health ${score} out of 100`}>
-      <span className={cx("display tnum font-extrabold tracking-[-0.03em]", dims.num, text)}>{score}</span>
+      <span className={cx("display tnum font-bold tracking-[-0.03em]", dims.num, text)}>{score}</span>
       <span className={cx("flex items-end", dims.gap)} aria-hidden>
         {Array.from({ length: 10 }, (_, i) => (
           <span key={i} className={cx("rounded-[1.5px]", dims.tick, i < filled ? fill : empty)} />
@@ -187,7 +187,7 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-7 pt-6 pb-1">
-          <h3 className="text-[20px] font-bold tracking-[-0.02em]">{title}</h3>
+          <h3 className="text-[24px] font-bold tracking-[-0.03em]">{title}</h3>
           <button onClick={onClose} className="rounded-md p-1 text-mute hover:bg-soft hover:text-ink" aria-label="Close">
             <X size={18} />
           </button>
@@ -203,8 +203,8 @@ export function Empty({ icon, title, desc, action }: { icon?: ReactNode; title: 
     <div className="flex items-start gap-4 rounded-[18px] border border-dashed border-[#cdd1c6] bg-panel/70 px-7 py-9">
       {icon && <div className="grid size-11 shrink-0 place-items-center rounded-[14px] bg-signal-wash text-signal-ink">{icon}</div>}
       <div className="min-w-0">
-        <div className="display text-[18px] font-bold tracking-[-0.02em]">{title}</div>
-        {desc && <p className="mt-1 max-w-[60ch] text-[13.5px] text-mute">{desc}</p>}
+        <div className="display text-[20px] font-bold tracking-[-0.03em]">{title}</div>
+        {desc && <p className="mt-1 max-w-[60ch] text-[15px] text-mute">{desc}</p>}
         {action && <div className="mt-4">{action}</div>}
       </div>
     </div>
@@ -226,7 +226,7 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: 
           aria-selected={value === t.id}
           onClick={() => onChange(t.id)}
           className={cx(
-            "relative -mb-px flex items-center gap-2 pb-2.5 text-[14px] font-medium transition-colors",
+            "relative -mb-px flex items-center gap-2 pb-3 text-[15px] font-semibold transition-colors",
             value === t.id ? "text-ink" : "text-mute hover:text-ink",
           )}
         >

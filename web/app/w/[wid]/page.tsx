@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { ChevronRight, Plus, Users, X } from "lucide-react";
+import { ChevronRight, Plus, Settings, Trash2, Users, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ProjectForm } from "@/components/ProjectForm";
 import { Button, Empty, ErrorNote, Field, Gauge, Input, Modal, PageHeader, Panel, Select, Spinner, StatusBadge, timeAgo } from "@/components/ui";
@@ -19,6 +19,37 @@ function WorkspacePage() {
   const [team, setTeam] = useState(false);
   const [invite, setInvite] = useState({ email: "", role: "member" });
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [wsName, setWsName] = useState("");
+  const [confirmName, setConfirmName] = useState("");
+  const [wsError, setWsError] = useState<string | null>(null);
+  const [wsBusy, setWsBusy] = useState(false);
+
+  async function renameWorkspace() {
+    setWsError(null);
+    setWsBusy(true);
+    try {
+      await api(`/workspaces/${wid}`, { method: "PATCH", body: { name: wsName } });
+      ws.reload();
+      setSettingsOpen(false);
+    } catch (e) {
+      setWsError((e as Error).message);
+    } finally {
+      setWsBusy(false);
+    }
+  }
+
+  async function deleteWorkspace() {
+    setWsError(null);
+    setWsBusy(true);
+    try {
+      await api(`/workspaces/${wid}`, { method: "DELETE" });
+      router.push("/workspaces");
+    } catch (e) {
+      setWsError((e as Error).message);
+      setWsBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (params.get("new")) setOpen(true);
@@ -42,6 +73,18 @@ function WorkspacePage() {
         subtitle="Your products and how each one did on its latest QA run."
         actions={
           <>
+            {ws.data?.role !== "member" && (
+              <Button
+                onClick={() => {
+                  setWsName(ws.data?.name ?? "");
+                  setConfirmName("");
+                  setWsError(null);
+                  setSettingsOpen(true);
+                }}
+              >
+                <Settings size={15} /> Settings
+              </Button>
+            )}
             <Button onClick={() => setTeam(true)}>
               <Users size={15} /> Team
             </Button>
@@ -82,7 +125,7 @@ function WorkspacePage() {
                   <div className="display truncate text-[17px] font-bold tracking-[-0.02em]">{p.name}</div>
                   <div className="truncate font-mono text-[12px] text-mute">{p.baseUrl.replace(/^https?:\/\//, "")}</div>
                 </div>
-                <div className="flex items-center gap-2 text-[13px] text-mute">
+                <div className="flex items-center gap-2 text-[14px] text-mute">
                   {p.lastRun ? (
                     <>
                       <StatusBadge s={p.lastRun.status} />
@@ -110,12 +153,48 @@ function WorkspacePage() {
         />
       </Modal>
 
+      <Modal open={settingsOpen} onClose={() => setSettingsOpen(false)} title="Workspace settings">
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            renameWorkspace();
+          }}
+        >
+          <Field label="Workspace name">
+            <Input required value={wsName} onChange={(e) => setWsName(e.target.value)} />
+          </Field>
+          <div className="flex justify-end">
+            <Button variant="primary" loading={wsBusy} disabled={!wsName.trim() || wsName === ws.data?.name}>
+              Save name
+            </Button>
+          </div>
+        </form>
+        {ws.data?.role === "owner" && (
+          <div className="mt-7 rounded-[16px] border border-[#f3c4cb] bg-fault-wash/50 p-4">
+            <div className="text-[15px] font-semibold text-fault">Delete workspace</div>
+            <p className="mt-1 text-[14.5px] text-mute">
+              Deletes {projects.data?.length ?? 0} product{projects.data?.length === 1 ? "" : "s"} with all their modules, runs, issues and reports. This can&apos;t be undone.
+            </p>
+            <Field label={`Type "${ws.data?.name}" to confirm`} className="mt-3">
+              <Input value={confirmName} onChange={(e) => setConfirmName(e.target.value)} autoComplete="off" />
+            </Field>
+            <Button variant="danger" className="mt-3" loading={wsBusy} disabled={confirmName !== ws.data?.name} onClick={deleteWorkspace}>
+              <Trash2 size={15} /> Delete workspace
+            </Button>
+          </div>
+        )}
+        <div className="mt-3">
+          <ErrorNote error={wsError} />
+        </div>
+      </Modal>
+
       <Modal open={team} onClose={() => setTeam(false)} title="Team members">
         <div className="space-y-2">
           {ws.data?.members?.map((m) => (
             <div key={m.id} className="flex items-center justify-between rounded-[8px] border border-line px-3 py-2.5">
               <div>
-                <div className="text-[13px] font-medium">{m.name}</div>
+                <div className="text-[14px] font-medium">{m.name}</div>
                 <div className="text-xs text-mute">{m.email}</div>
               </div>
               <div className="flex items-center gap-2 text-xs capitalize text-mute">

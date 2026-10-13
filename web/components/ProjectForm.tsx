@@ -14,6 +14,9 @@ export type ProjectPayload = {
   credentials: { username: string; password: string; notes: string };
   figmaFileKey: string;
   figmaToken: string;
+  referenceUrl: string;
+  referencePasscode: string;
+  referenceNotes: string;
   openApiUrl: string;
   apiBaseUrl: string;
   apiAuth: { headerName: string; headerValue: string };
@@ -30,7 +33,7 @@ function Section({ icon, title, desc, children }: { icon: ReactNode; title: stri
           <span className="grid size-8 place-items-center rounded-[10px] bg-signal-wash text-signal-ink">{icon}</span>
           {title}
         </div>
-        <p className="mt-1.5 text-[13px] leading-relaxed text-mute">{desc}</p>
+        <p className="mt-1.5 text-[14px] leading-relaxed text-mute">{desc}</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">{children}</div>
     </section>
@@ -64,6 +67,9 @@ export function ProjectForm({
     credentials: { username: initial?.credentials.username ?? "", password: "", notes: initial?.credentials.notes ?? "" },
     figmaFileKey: initial?.figmaFileKey ?? "",
     figmaToken: "",
+    referenceUrl: initial?.referenceUrl ?? "",
+    referencePasscode: "",
+    referenceNotes: initial?.referenceNotes ?? "",
     openApiUrl: initial?.openApiUrl ?? "",
     apiBaseUrl: initial?.apiBaseUrl ?? "",
     apiAuth: { headerName: initial?.apiAuth.headerName || "Authorization", headerValue: "" },
@@ -82,6 +88,7 @@ export function ProjectForm({
     try {
       const payload: Partial<ProjectPayload> = { ...f };
       if (!f.figmaToken) delete payload.figmaToken; // blank = keep saved token
+      if (!f.referencePasscode) delete payload.referencePasscode; // blank = keep saved passcode
       if (!showAutomation) {
         delete payload.scheduleCron;
         delete payload.scheduleSuites;
@@ -134,13 +141,39 @@ export function ProjectForm({
         </Field>
       </Section>
 
-      <Section icon={<PenTool size={17} />} title="Figma" desc="Optional. Connect the design file, then link frames to pages inside each module.">
-        <Field label="Figma file URL or key">
-          <Input value={f.figmaFileKey} onChange={(e) => set("figmaFileKey", e.target.value)} placeholder="https://www.figma.com/design/AbC123…" />
-        </Field>
-        <Field label="Figma access token" hint="Figma → Settings → Security → Personal access tokens (read-only)">
-          <Input type="password" value={f.figmaToken} onChange={(e) => set("figmaToken", e.target.value)} placeholder={initial?.hasFigmaToken ? saved : "figd_…"} autoComplete="off" />
-        </Field>
+      <Section
+        icon={<PenTool size={17} />}
+        title="Design reference"
+        desc="What the product should look like. Use a Figma file, a live reference website (like an approved prototype), or both. You link pages to it inside each module."
+      >
+        <div className="sm:col-span-2 rounded-[16px] border border-line bg-soft/60 p-4">
+          <div className="mb-3 text-[14px] font-semibold">Reference website</div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Website link" hint="The approved version to match against">
+              <Input type="url" value={f.referenceUrl} onChange={(e) => set("referenceUrl", e.target.value)} placeholder="https://stack-opal.vercel.app" />
+            </Field>
+            <Field label="Passcode (if the site asks for one)" hint="Stored encrypted. Typed in automatically.">
+              <Input
+                type="password"
+                value={f.referencePasscode}
+                onChange={(e) => set("referencePasscode", e.target.value)}
+                placeholder={initial?.hasReferencePasscode ? saved : "Leave empty if there's none"}
+                autoComplete="off"
+              />
+            </Field>
+          </div>
+        </div>
+        <div className="sm:col-span-2 rounded-[16px] border border-line bg-soft/60 p-4">
+          <div className="mb-3 text-[14px] font-semibold">Figma</div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Figma file link or key">
+              <Input value={f.figmaFileKey} onChange={(e) => set("figmaFileKey", e.target.value)} placeholder="https://www.figma.com/design/AbC123…" />
+            </Field>
+            <Field label="Figma access token" hint="Figma → Settings → Security → Personal access tokens (read-only)">
+              <Input type="password" value={f.figmaToken} onChange={(e) => set("figmaToken", e.target.value)} placeholder={initial?.hasFigmaToken ? saved : "figd_…"} autoComplete="off" />
+            </Field>
+          </div>
+        </div>
       </Section>
 
       <Section icon={<Server size={17} />} title="API" desc="Optional. Link your OpenAPI (Swagger) spec and every endpoint gets tested.">
@@ -177,7 +210,7 @@ export function ProjectForm({
                 className={cx("rounded-[16px] border p-4 text-left transition-colors", f.apiTestMode === id ? "border-ink bg-panel shadow-[inset_0_0_0_1px_var(--color-ink)]" : "border-line bg-soft hover:border-[#cbcfc4]")}
               >
                 <div className="text-[14px] font-semibold">{label}</div>
-                <div className="mt-0.5 text-[12.5px] text-mute">{hint}</div>
+                <div className="mt-0.5 text-[14.5px] text-mute">{hint}</div>
               </button>
             ))}
           </div>
@@ -193,7 +226,7 @@ export function ProjectForm({
                   type="button"
                   key={s.label}
                   onClick={() => set("scheduleCron", s.cron)}
-                  className={cx("rounded-full border px-3 py-1.5 text-[13px] transition-colors", f.scheduleCron === s.cron ? "border-ink bg-ink text-white" : "border-line bg-panel text-mute hover:text-ink")}
+                  className={cx("rounded-full border px-3 py-1.5 text-[14px] transition-colors", f.scheduleCron === s.cron ? "border-ink bg-ink text-white" : "border-line bg-panel text-mute hover:text-ink")}
                 >
                   {s.label}
                 </button>
@@ -210,7 +243,7 @@ export function ProjectForm({
                     type="button"
                     key={s.id}
                     onClick={() => set("scheduleSuites", on ? f.scheduleSuites.filter((x) => x !== s.id) : [...f.scheduleSuites, s.id])}
-                    className={cx("rounded-full border px-3 py-1.5 text-[13px] transition-colors", on ? "border-ink bg-ink text-white" : "border-line bg-panel text-mute hover:text-ink")}
+                    className={cx("rounded-full border px-3 py-1.5 text-[14px] transition-colors", on ? "border-ink bg-ink text-white" : "border-line bg-panel text-mute hover:text-ink")}
                   >
                     {s.label}
                   </button>

@@ -27,6 +27,11 @@ export type Project = {
   figmaFileKey: string;
   figmaTokenEnc: string;
 
+  // Live reference website (approved prototype) used instead of / alongside Figma
+  referenceUrl: string;
+  referencePasscodeEnc: string;
+  referenceNotes: string;
+
   // Backend / API
   openApiUrl: string;
   apiBaseUrl: string;
@@ -41,7 +46,8 @@ export type Project = {
   createdAt: Date;
 };
 
-export type FigmaFrame = { path: string; nodeId: string; label?: string };
+/** A page and its approved design: a Figma frame (nodeId) or a reference-site page (nodeId = path or full URL). */
+export type FigmaFrame = { path: string; nodeId: string; label?: string; source?: "figma" | "site" };
 export type AiEvalTarget = {
   url?: string;
   method?: string;

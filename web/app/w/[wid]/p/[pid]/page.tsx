@@ -18,7 +18,7 @@ function Coverage({ m, autoPages }: { m: Module; autoPages: boolean }) {
   const items = [
     { on: m.paths.length > 0 || autoPages, icon: Globe, label: m.paths.length ? `${m.paths.length} page${m.paths.length === 1 ? "" : "s"}` : autoPages ? "Auto pages" : "No pages" },
     { on: Boolean(m.userFlows.trim()), icon: ListChecks, label: m.userFlows.trim() ? `${m.userFlows.trim().split("\n").length} flows` : "No flows" },
-    { on: m.figmaFrames.length > 0, icon: PenTool, label: m.figmaFrames.length ? `${m.figmaFrames.length} Figma frames` : "No Figma" },
+    { on: m.figmaFrames.length > 0, icon: PenTool, label: m.figmaFrames.length ? `${m.figmaFrames.length} design ref${m.figmaFrames.length === 1 ? "" : "s"}` : "No design ref" },
     { on: m.apiScopes.length > 0, icon: Server, label: m.apiScopes.length ? `API: ${m.apiScopes.join(", ")}` : "No API" },
     { on: Boolean(m.aiEvalTarget?.url), icon: Bot, label: m.aiEvalTarget?.url ? "AI evals" : "No AI evals" },
   ];
@@ -94,7 +94,7 @@ function ProjectPage() {
       <PageHeader
         title={p.name}
         subtitle={
-          <a href={p.baseUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-mono text-[13px] hover:text-ink">
+          <a href={p.baseUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-mono text-[14px] hover:text-ink">
             {p.baseUrl.replace(/^https?:\/\//, "")} <ExternalLink size={12} />
           </a>
         }
@@ -126,7 +126,7 @@ function ProjectPage() {
         </div>
         <div className="px-6 py-5">
           <div className="label text-faint">Automatic runs</div>
-          <div className="mt-1.5 text-[14px]">{p.scheduleCron ? <span className="font-mono text-[13px]">{p.scheduleCron}</span> : <span className="text-faint">Off — set up in Settings</span>}</div>
+          <div className="mt-1.5 text-[14px]">{p.scheduleCron ? <span className="font-mono text-[14px]">{p.scheduleCron}</span> : <span className="text-faint">Off — set up in Settings</span>}</div>
         </div>
       </Panel>
 
@@ -175,8 +175,8 @@ function ProjectPage() {
                 <li key={mvp} className="relative">
                   <span className="grad absolute top-1.5 -left-[34px] size-4 rounded-full border-[3px] border-hangar" aria-hidden />
                   <div className="mb-3 flex items-baseline gap-3">
-                    <h3 className="text-[22px] font-extrabold tracking-[-0.03em]">{mvp}</h3>
-                    <span className="text-[13px] text-mute">
+                    <h3 className="text-[22px] font-bold tracking-[-0.03em]">{mvp}</h3>
+                    <span className="text-[14px] text-mute">
                       {list.length} module{list.length === 1 ? "" : "s"}
                     </span>
                   </div>
@@ -189,12 +189,12 @@ function ProjectPage() {
                             <Link href={`/w/${wid}/p/${pid}/m/${m.id}`} className="display text-[17px] font-bold tracking-[-0.02em] hover:underline">
                               {m.name}
                             </Link>
-                            <p className="mt-0.5 line-clamp-1 text-[13px] text-mute">{m.description || "Add a description so the AI knows what correct looks like."}</p>
+                            <p className="mt-0.5 line-clamp-1 text-[14px] text-mute">{m.description || "Add a description so the AI knows what correct looks like."}</p>
                             <div className="mt-2.5">
                               <Coverage m={m} autoPages={!(modules.data ?? []).some((x) => x.id !== m.id && x.paths.length)} />
                             </div>
                           </div>
-                          <div>{last ? <Gauge score={last.healthScore} size="sm" /> : <span className="text-[13px] text-faint">Not tested</span>}</div>
+                          <div>{last ? <Gauge score={last.healthScore} size="sm" /> : <span className="text-[14px] text-faint">Not tested</span>}</div>
                           <div className="flex gap-2">
                             <Link href={`/w/${wid}/p/${pid}/m/${m.id}`}>
                               <Button size="sm" variant="ghost">
@@ -242,7 +242,7 @@ function ProjectPage() {
           <Panel className="p-6">
             <SectionTitle title="Run QA after every deploy" desc="Call this URL from your CI pipeline (GitHub Actions, GitLab, Bitbucket). Anyone with the URL can start a run, so keep it secret." />
             <div className="flex gap-2">
-              <Input readOnly value={hook} className="font-mono text-[12.5px]" onFocus={(e) => e.target.select()} />
+              <Input readOnly value={hook} className="font-mono text-[14.5px]" onFocus={(e) => e.target.select()} />
               <Button
                 onClick={() => {
                   navigator.clipboard.writeText(hook);
@@ -263,7 +263,7 @@ function ProjectPage() {
             </div>
             <Textarea
               readOnly
-              className="mt-3 rounded-[16px] border-deck bg-deck font-mono text-[12.5px] text-[#d9ddd3]"
+              className="mt-3 rounded-[16px] border-deck bg-deck font-mono text-[14.5px] text-[#d9ddd3]"
               rows={4}
               value={`# Add after your deploy step\n- run: curl -fsS -X POST -H "Content-Type: application/json" \\\n    -d '{"suites":["ui","api","ai"]}' ${hook}`}
             />
@@ -271,7 +271,7 @@ function ProjectPage() {
           <Panel className="flex flex-wrap items-center justify-between gap-4 border-[#f3c4cb] p-6">
             <div>
               <div className="font-semibold">Delete this product</div>
-              <p className="text-[13px] text-mute">Removes its modules, runs, bugs, screenshots and reports. This can't be undone.</p>
+              <p className="text-[14px] text-mute">Removes its modules, runs, bugs, screenshots and reports. This can't be undone.</p>
             </div>
             <Button
               variant="danger"

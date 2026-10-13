@@ -49,6 +49,7 @@ export async function executeRun(runId: string, browser: Browser) {
       creds: decrypt<Credentials>(project.credentialsEnc),
       apiAuth: decrypt<ApiAuth>(project.apiAuthEnc),
       figmaToken: decrypt<string>(project.figmaTokenEnc),
+      refPasscode: decrypt<string>(project.referencePasscodeEnc ?? ""),
     },
     browser,
   );

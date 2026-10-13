@@ -85,6 +85,24 @@ http
       });
       return;
     }
+    // Passcode-protected "approved design" (reference site) — passcode: 1234
+    if (url.pathname === "/ref-unlock" && req.method === "POST") {
+      let b = "";
+      req.on("data", (c) => (b += c));
+      req.on("end", () => {
+        const ok = new URLSearchParams(b).get("passcode") === "1234";
+        res.writeHead(302, { Location: ok ? "/ref/dashboard" : "/ref/dashboard?wrong=1", ...(ok ? { "Set-Cookie": "ref=ok; Path=/" } : {}) });
+        res.end();
+      });
+      return;
+    }
+    if (url.pathname.startsWith("/ref/")) {
+      res.writeHead(200, { "Content-Type": "text/html" });
+      if (!(req.headers.cookie ?? "").includes("ref=ok")) {
+        return res.end(layout("Locked", `<h1>Enter passcode</h1><form method="post" action="/ref-unlock"><input type="password" name="passcode" placeholder="Passcode"><button type="submit">Unlock</button></form>`));
+      }
+      return res.end(layout("Dashboard", `<h1 style="color:#2563eb;font-size:40px">Dashboard Overview</h1><div class="card">Total revenue: <b>Rs 120,000</b></div><div class="card">Analytics table</div><input placeholder="Search"><button>Go</button>`));
+    }
     const page = pages[url.pathname];
     if (page) {
       res.writeHead(200, { "Content-Type": "text/html" });

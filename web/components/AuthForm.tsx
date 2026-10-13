@@ -21,7 +21,7 @@ const TICKER: { ok: boolean; text: string }[] = [
 
 const CHECKS = [
   { icon: Globe, label: "Frontend" },
-  { icon: PenTool, label: "Figma match" },
+  { icon: PenTool, label: "Design match" },
   { icon: Server, label: "API" },
   { icon: Bot, label: "AI answers" },
 ];
@@ -89,7 +89,7 @@ function Ticker() {
   }, []);
   const lines = [0, 1, 2].map((k) => TICKER[(i + k) % TICKER.length]);
   return (
-    <div className="space-y-1.5 font-mono text-[12.5px]" aria-hidden>
+    <div className="space-y-1.5 font-mono text-[14.5px]" aria-hidden>
       {lines.map((l, k) => (
         <div key={`${i}-${k}`} className={cx("flex items-center gap-2.5 transition-opacity", k === 2 ? "opacity-100" : k === 1 ? "opacity-70" : "opacity-40")}>
           <span className={cx("grid size-4 shrink-0 place-items-center rounded-full text-[9px] font-bold", l.ok ? "bg-[#17865f] text-white" : "grad text-[#10140f]")}>{l.ok ? "✓" : "!"}</span>
@@ -126,9 +126,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         <div className="pointer-events-none absolute top-1/3 -right-40 size-[560px] rounded-full bg-signal/20 blur-[140px]" aria-hidden />
         <Logo />
         <div className="relative mt-14 max-w-[560px]">
-          <h1 className="text-[46px] leading-[1.02] font-extrabold tracking-[-0.04em]">Find the bug before your users do.</h1>
+          <h1 className="text-[46px] leading-[1.02] font-bold tracking-[-0.04em]">Find the bug before your users do.</h1>
           <p className="mt-4 max-w-[46ch] text-[15.5px] leading-relaxed text-deck-text">
-            QA Pilot opens your product like a real user, checks it against Figma, probes every API and grades your AI answers. Every issue comes back with a screenshot.
+            QA Pilot opens your product like a real user, matches it against your approved design, probes every API and grades your AI answers. Every issue comes back with a screenshot.
           </p>
         </div>
         <div className="relative mt-10 max-w-[560px]">
@@ -139,7 +139,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         </div>
         <div className="relative mt-auto flex flex-wrap gap-2 pt-10">
           {CHECKS.map(({ icon: Icon, label }) => (
-            <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-deck-line px-3 py-1.5 text-[12.5px] text-deck-text">
+            <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-deck-line px-3 py-1.5 text-[14.5px] text-deck-text">
               <Icon size={13} className={label === "AI answers" ? "text-[#b4aeff]" : "text-signal-2"} /> {label}
             </span>
           ))}
@@ -151,7 +151,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           <div className="mb-10 lg:hidden">
             <Logo tone="light" />
           </div>
-          <h2 className="text-[34px] font-extrabold tracking-[-0.035em]">{mode === "login" ? "Sign in" : "Create your account"}</h2>
+          <h2 className="text-[34px] font-bold tracking-[-0.035em]">{mode === "login" ? "Sign in" : "Create your account"}</h2>
           <p className="mt-1.5 text-[14px] text-mute">
             {mode === "login" ? "Pick up where your last run left off." : "The first account becomes the workspace owner."}
           </p>
@@ -175,11 +175,11 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               />
             </Field>
             <ErrorNote error={error} />
-            <Button variant="primary" className="h-12 w-full text-[15px]" loading={busy}>
+            <Button variant="primary" className="h-14 w-full text-[17px]" loading={busy}>
               {mode === "login" ? "Sign in" : "Create account"}
             </Button>
           </form>
-          <p className="mt-6 text-[13.5px] text-mute">
+          <p className="mt-6 text-[14.5px] text-mute">
             {mode === "login" ? (
               <>
                 No account yet?{" "}

@@ -179,32 +179,92 @@ function padBox(b: Box, w: number, h: number, pad = 140): Box {
   return { x, y, w: Math.min(w - x, b.w + pad * 2), h: Math.min(h - y, b.h + pad * 2) };
 }
 
-export async function runVisualSuite(ctx: RunContext, mod: Module) {
-  const frames = (mod.figmaFrames ?? []) as FigmaFrame[];
-  if (!frames.length) return ctx.log(`No Figma frames mapped for "${mod.name}" — skipping reference QA`, "warn");
+type Reference = { png: Buffer; texts: SpecText[]; name: string; where: string };
+
+/** Figma frame → PNG + exact text/typography spec from the node tree. */
+async function loadFigmaReference(ctx: RunContext, frame: FigmaFrame): Promise<Reference> {
   const token = ctx.secrets.figmaToken;
   const fileKey = ctx.project.figmaFileKey;
-  if (!token || !fileKey) return ctx.log("Figma file key or token missing in project settings — skipping reference QA", "warn");
+  if (!token || !fileKey) throw new Error("Figma file or token missing in product settings");
+  const nodeId = frame.nodeId.replace("-", ":");
+  const [imgRes, nodesRes] = await Promise.all([
+    figmaGet<{ images: Record<string, string | null> }>(`/images/${fileKey}?ids=${encodeURIComponent(nodeId)}&format=png&scale=1`, token),
+    figmaGet<{ nodes: Record<string, { document: any }> }>(`/files/${fileKey}/nodes?ids=${encodeURIComponent(nodeId)}`, token),
+  ]);
+  const imgUrl = imgRes.images[nodeId];
+  const doc = nodesRes.nodes[nodeId]?.document;
+  if (!imgUrl || !doc) throw new Error(`Figma node ${nodeId} not found`);
+  const png = Buffer.from(await (await fetch(imgUrl)).arrayBuffer());
+  const bb = doc.absoluteBoundingBox ?? { x: 0, y: 0 };
+  return { png, texts: collectFigmaTexts(doc, { x: bb.x, y: bb.y }), name: "FIGMA", where: `Figma node ${nodeId}` };
+}
+
+/** Resolves a reference-site target: full URL, or a path on the product's reference website. */
+function referenceUrl(ctx: RunContext, frame: FigmaFrame) {
+  const target = (frame.nodeId || frame.path || "/").trim();
+  if (/^https?:\/\//i.test(target)) return target;
+  if (!ctx.project.referenceUrl) throw new Error("Add the reference website link in product settings");
+  return new URL(target, ctx.project.referenceUrl).toString();
+}
+
+/**
+ * Live reference website (e.g. an approved prototype on Vercel) → full-page screenshot
+ * + computed text styles. Unlocks a passcode gate if the site shows one.
+ */
+async function loadSiteReference(ctx: RunContext, frame: FigmaFrame, width = 1440): Promise<Reference> {
+  const url = referenceUrl(ctx, frame);
+  const context = await ctx.browser.newContext({ viewport: { width, height: 1000 }, ignoreHTTPSErrors: true });
+  await context.addInitScript("globalThis.__name = globalThis.__name || ((f) => f);");
+  const page = await context.newPage();
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45000 });
+    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+    const passcode = ctx.secrets.refPasscode;
+    if (passcode) {
+      const gate = page.locator('input[type="password"]:visible, input[name*="pass" i]:visible, input[name*="code" i]:visible, input[placeholder*="pass" i]:visible, input[placeholder*="code" i]:visible').first();
+      const fallback = page.locator("input:visible");
+      const field = (await gate.count()) ? gate : (await fallback.count()) === 1 ? fallback.first() : null;
+      if (field) {
+        await ctx.log(`Unlocking reference site with the passcode`);
+        await field.fill(passcode);
+        const submit = page.locator('button[type="submit"]:visible, input[type="submit"]:visible, button:visible').first();
+        if (await submit.count()) await submit.click().catch(() => field.press("Enter"));
+        else await field.press("Enter");
+        await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+        await page.waitForTimeout(1200);
+        if (await page.locator('input[type="password"]:visible').count()) throw new Error("Reference site passcode was not accepted");
+        if (new URL(page.url()).pathname !== new URL(url).pathname) {
+          await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45000 });
+          await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+        }
+      }
+    }
+    await page.evaluate(() => document.fonts?.ready).catch(() => {});
+    await page.addStyleTag({ content: "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}" });
+    await page.waitForTimeout(800);
+    const png = await page.screenshot({ fullPage: true, type: "png", timeout: 30000 });
+    const texts = (await page.evaluate(DOM_TEXTS_JS)) as SpecText[];
+    return { png, texts, name: "REFERENCE", where: url };
+  } finally {
+    await context.close();
+  }
+}
+
+export async function runVisualSuite(ctx: RunContext, mod: Module) {
+  const frames = (mod.figmaFrames ?? []) as FigmaFrame[];
+  if (!frames.length) return ctx.log(`No design references linked for "${mod.name}" — skipping design match`, "warn");
 
   for (const frame of frames) {
     await ctx.checkCancelled();
     const label = frame.label || frame.path;
+    const source = frame.source ?? "figma";
     try {
-      await ctx.log(`Comparing ${label} with Figma node ${frame.nodeId}`);
-      const nodeId = frame.nodeId.replace("-", ":");
-      const [imgRes, nodesRes] = await Promise.all([
-        figmaGet<{ images: Record<string, string | null> }>(`/images/${fileKey}?ids=${encodeURIComponent(nodeId)}&format=png&scale=1`, token),
-        figmaGet<{ nodes: Record<string, { document: any }> }>(`/files/${fileKey}/nodes?ids=${encodeURIComponent(nodeId)}`, token),
-      ]);
-      const imgUrl = imgRes.images[nodeId];
-      const doc = nodesRes.nodes[nodeId]?.document;
-      if (!imgUrl || !doc) throw new Error(`Figma node ${nodeId} not found`);
-      const figmaPng = Buffer.from(await (await fetch(imgUrl)).arrayBuffer());
-      const fm = await sharp(figmaPng).metadata();
+      await ctx.log(`Comparing ${label} with ${source === "site" ? "the reference website" : `Figma node ${frame.nodeId}`}`);
+      const ref = source === "site" ? await loadSiteReference(ctx, frame) : await loadFigmaReference(ctx, frame);
+      const fm = await sharp(ref.png).metadata();
       const W = fm.width!, H = Math.min(fm.height!, 6000);
-      const figmaFit = await fit(figmaPng, W, H);
-      const bb = doc.absoluteBoundingBox ?? { x: 0, y: 0 };
-      const figmaTexts = collectFigmaTexts(doc, { x: bb.x, y: bb.y });
+      const figmaFit = await fit(ref.png, W, H);
+      const figmaTexts = ref.texts;
 
       // Live page at the exact design width
       const context = await newContext(ctx, { width: W, height: Math.min(H, 1200) });
@@ -231,23 +291,23 @@ export async function runVisualSuite(ctx: RunContext, mod: Module) {
       const mismatched = pixelmatch(a, b, diff, W, H, { threshold: 0.1, includeAA: false });
       const pct = (mismatched / (W * H)) * 100;
       const diffPng = await sharp(diff, { raw: { width: W, height: H, channels: 4 } }).png().toBuffer();
-      await ctx.log(`${label}: ${pct.toFixed(2)}% pixels differ from Figma`);
+      await ctx.log(`${label}: ${pct.toFixed(2)}% pixels differ from the reference`);
 
       // 2) Exact spec diff
       const specIssues = diffSpecs(figmaTexts, domTexts);
       const overview = await sideBySide(
         [
-          { label: "FIGMA", img: figmaFit },
+          { label: ref.name, img: figmaFit },
           { label: "LIVE", img: liveFit },
           { label: `DIFF ${pct.toFixed(1)}%`, img: diffPng },
         ],
         W,
         H,
       );
-      const overviewPath = await ctx.saveImage(overview, `figma-${label}`);
+      const overviewPath = await ctx.saveImage(overview, `design-${label}`);
 
       if (pct < env.visualDiffThreshold && !specIssues.length) {
-        await ctx.log(`${label} matches the design ✔`, "success");
+        await ctx.log(`${label} matches the reference ✔`, "success");
         continue;
       }
 
@@ -268,7 +328,7 @@ export async function runVisualSuite(ctx: RunContext, mod: Module) {
           model: env.claudeModelStrong,
           maxTokens: 6000,
           system:
-            "You are a pixel-perfect UI QA reviewer. Compare the FIGMA design (image 1) with the LIVE implementation (image 2). " +
+            "You are a pixel-perfect UI QA reviewer. Compare the approved DESIGN REFERENCE (image 1) with the LIVE implementation (image 2). " +
             "Image 3 highlights differing pixels in red. List every meaningful mismatch: missing/extra elements, wrong text, layout/position shifts, " +
             "spacing/padding, sizes, font family/size/weight, colours, borders/radius, shadows, icons, images, alignment. " +
             "Ignore anti-aliasing noise, dynamic data (names, dates, counts) and placeholder images. Be specific with measurements. " +
@@ -278,7 +338,7 @@ export async function runVisualSuite(ctx: RunContext, mod: Module) {
             imageBlock(await small(liveFit)),
             imageBlock(await small(diffPng)),
             textBlock(
-              `Page: ${frame.path}\nPixel mismatch: ${pct.toFixed(2)}%\n\nExact typography/text check (design vs DOM computed styles):\n` +
+              `Page: ${frame.path}\nReference: ${ref.where}\nPixel mismatch: ${pct.toFixed(2)}%\n\nExact typography/text check (reference vs live, computed styles):\n` +
                 (specIssues.length ? specIssues.slice(0, 60).map((i) => `- "${i.text.slice(0, 60)}": ${i.problem}`).join("\n") : "no text/typography differences"),
             ),
           ],
@@ -293,7 +353,7 @@ export async function runVisualSuite(ctx: RunContext, mod: Module) {
                     title: { type: "string" },
                     severity: { type: "string", enum: ["critical", "high", "medium", "low"] },
                     element: { type: "string" },
-                    expected: { type: "string", description: "What the design shows" },
+                    expected: { type: "string", description: "What the reference shows" },
                     actual: { type: "string", description: "What the live page shows" },
                     box: {
                       type: "object",
@@ -312,13 +372,13 @@ export async function runVisualSuite(ctx: RunContext, mod: Module) {
         for (const m of review.mismatches.slice(0, 30)) {
           const box = clampBox(m.box, W, H);
           const crop = padBox(box, W, H);
-          const evidence = await sideBySide([{ label: "FIGMA", img: figmaFit }, { label: "LIVE", img: liveFit }], W, H, [box], crop);
+          const evidence = await sideBySide([{ label: ref.name, img: figmaFit }, { label: "LIVE", img: liveFit }], W, H, [box], crop);
           await ctx.addBug(mod.id, {
             suite: "visual",
             category: "visual",
             severity: m.severity,
             title: `${label}: ${m.title}`,
-            description: `Element: ${m.element}\nFigma node: ${frame.nodeId}\nPage pixel mismatch: ${pct.toFixed(2)}%`,
+            description: `Element: ${m.element}\nReference: ${ref.where}\nPage pixel mismatch: ${pct.toFixed(2)}%`,
             expected: m.expected,
             actual: m.actual,
             url: ctx.url(frame.path),
@@ -331,7 +391,7 @@ export async function runVisualSuite(ctx: RunContext, mod: Module) {
           suite: "visual",
           category: "visual",
           severity: pct > 10 ? "high" : "medium",
-          title: `${label} differs from Figma (${pct.toFixed(1)}% pixels)`,
+          title: `${label} differs from the ${source === "site" ? "reference site" : "Figma design"} (${pct.toFixed(1)}% pixels)`,
           description: specIssues.length ? `Text/typography differences:\n${specIssues.slice(0, 30).map((i) => `- "${i.text.slice(0, 60)}": ${i.problem}`).join("\n")}` : "",
           url: ctx.url(frame.path),
           screenshot: overviewPath,
@@ -339,7 +399,7 @@ export async function runVisualSuite(ctx: RunContext, mod: Module) {
         });
       }
     } catch (e) {
-      await ctx.log(`Figma comparison failed for ${label}: ${(e as Error).message}`, "error");
+      await ctx.log(`Design match failed for ${label}: ${(e as Error).message}`, "error");
     }
   }
 }

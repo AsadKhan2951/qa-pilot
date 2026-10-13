@@ -60,12 +60,12 @@ function Workspaces() {
         <Panel className="divide-y divide-line">
           {data.map((w) => (
             <Link key={w.id} href={`/w/${w.id}`} className="group flex items-center gap-4 px-6 py-5 transition-colors hover:bg-soft">
-              <span className="grad display grid size-12 shrink-0 place-items-center rounded-[14px] text-[16px] font-extrabold text-ink">
+              <span className="grad display grid size-12 shrink-0 place-items-center rounded-[14px] text-[16px] font-bold text-ink">
                 {w.name.split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase()}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="display truncate text-[18px] font-bold tracking-[-0.02em]">{w.name}</div>
-                <div className="text-[13px] text-mute">
+                <div className="text-[14px] text-mute">
                   {w.projectCount ?? 0} {w.projectCount === 1 ? "product" : "products"}, you are {w.role === "owner" ? "the owner" : `a${w.role === "admin" ? "n" : ""} ${w.role}`}
                 </div>
               </div>

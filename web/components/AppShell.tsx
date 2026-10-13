@@ -25,7 +25,7 @@ export function Logo({ tone = "dark" }: { tone?: "dark" | "light" }) {
   return (
     <span className="flex items-center gap-2.5">
       <Mark tone={tone} />
-      <span className={cx("display text-[19px] font-extrabold tracking-[-0.04em]", tone === "dark" ? "text-white" : "text-ink")}>QA Pilot</span>
+      <span className={cx("display text-[19px] font-bold tracking-[-0.04em]", tone === "dark" ? "text-white" : "text-ink")}>QA Pilot</span>
     </span>
   );
 }
@@ -104,7 +104,7 @@ export function AppShell({ workspaceId, projectId, crumbs, children }: { workspa
                           key={p.id}
                           href={`/w/${w.id}/p/${p.id}`}
                           className={cx(
-                            "relative flex items-center justify-between gap-2 rounded-[10px] px-2.5 py-1.5 text-[13.5px] transition-colors",
+                            "relative flex items-center justify-between gap-2 rounded-[10px] px-2.5 py-1.5 text-[14.5px] transition-colors",
                             active ? "bg-deck-2 text-white" : "hover:bg-deck-2/70 hover:text-white",
                           )}
                         >
@@ -123,15 +123,15 @@ export function AppShell({ workspaceId, projectId, crumbs, children }: { workspa
                         </Link>
                       );
                     })}
-                    <Link href={`/w/${w.id}?new=1`} className="flex items-center gap-1.5 rounded-[6px] px-2 py-1.5 text-[13px] text-[#8a9186] hover:bg-deck-2/70 hover:text-white">
-                      <Plus size={13} /> Add project
+                    <Link href={`/w/${w.id}?new=1`} className="flex items-center gap-1.5 rounded-[6px] px-2 py-1.5 text-[14px] text-[#8a9186] hover:bg-deck-2/70 hover:text-white">
+                      <Plus size={13} /> Add product
                     </Link>
                   </div>
                 )}
               </div>
             );
           })}
-          <Link href="/workspaces?new=1" className="mt-2 flex items-center gap-2.5 rounded-[7px] px-2 py-1.5 text-[13.5px] text-[#8a9186] hover:bg-deck-2 hover:text-white">
+          <Link href="/workspaces?new=1" className="mt-2 flex items-center gap-2.5 rounded-[7px] px-2 py-1.5 text-[14.5px] text-[#8a9186] hover:bg-deck-2 hover:text-white">
             <span className="grid size-7 place-items-center rounded-[9px] border border-dashed border-deck-line">
               <Plus size={13} />
             </span>
@@ -142,7 +142,7 @@ export function AppShell({ workspaceId, projectId, crumbs, children }: { workspa
         <div className="m-3 flex items-center gap-2.5 rounded-[16px] bg-deck-2 px-3 py-3">
           <div className="grid size-8 shrink-0 place-items-center rounded-full bg-[#2b3328] text-[12px] font-semibold text-white">{initials(me.data?.name) || "·"}</div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[13px] font-medium text-white">{me.data?.name}</div>
+            <div className="truncate text-[14px] font-medium text-white">{me.data?.name}</div>
             <div className="truncate text-[12px] text-[#8a9186]">{me.data?.email}</div>
           </div>
           <button onClick={logout} className="rounded-md p-1.5 text-[#8a9186] hover:bg-deck-line hover:text-white" title="Sign out" aria-label="Sign out">
@@ -159,7 +159,7 @@ export function AppShell({ workspaceId, projectId, crumbs, children }: { workspa
           <Link href="/workspaces" className="md:hidden">
             <Mark tone="light" size={24} />
           </Link>
-          <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[13px] text-mute">
+          <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[14px] text-mute">
             {crumbs?.map((c, i) => (
               <span key={i} className="flex min-w-0 items-center gap-1.5">
                 {i > 0 && <ChevronRight size={13} className="shrink-0 text-faint" />}

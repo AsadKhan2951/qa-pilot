@@ -38,7 +38,7 @@ export class RunContext {
     public run: Run,
     public project: Project,
     public modules: Module[],
-    public secrets: { creds: Credentials | null; apiAuth: ApiAuth | null; figmaToken: string | null },
+    public secrets: { creds: Credentials | null; apiAuth: ApiAuth | null; figmaToken: string | null; refPasscode: string | null },
     public browser: Browser,
   ) {}
 

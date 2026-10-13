@@ -1,7 +1,7 @@
 export type Suite = "ui" | "visual" | "api" | "ai";
 export const SUITES: { id: Suite; label: string; hint: string }[] = [
   { id: "ui", label: "Frontend", hint: "Every page checked, then an AI tester walks your flows" },
-  { id: "visual", label: "Figma match", hint: "Pixels, text, fonts and colours against the design" },
+  { id: "visual", label: "Design match", hint: "Pixels, text, fonts and colours against Figma or a reference site" },
   { id: "api", label: "API", hint: "Contract, auth and bad-input handling for each endpoint" },
   { id: "ai", label: "AI answers", hint: "Your test questions, each answer graded by Claude" },
 ];
@@ -19,6 +19,9 @@ export type Project = {
   credentials: { username: string; hasPassword: boolean; notes: string };
   figmaFileKey: string;
   hasFigmaToken: boolean;
+  referenceUrl: string;
+  referenceNotes: string;
+  hasReferencePasscode: boolean;
   openApiUrl: string;
   apiBaseUrl: string;
   apiAuth: { headerName: string; hasValue: boolean };
@@ -29,7 +32,7 @@ export type Project = {
   lastRun?: { status: string; healthScore: number | null; createdAt: string } | null;
 };
 
-export type FigmaFrame = { path: string; nodeId: string; label?: string };
+export type FigmaFrame = { path: string; nodeId: string; label?: string; source?: "figma" | "site" };
 export type AiEvalTarget = { url?: string; method?: string; headers?: Record<string, string>; bodyTemplate?: string; responsePath?: string };
 export type EvalCase = { id: string; name: string; input: string; criteria: string };
 

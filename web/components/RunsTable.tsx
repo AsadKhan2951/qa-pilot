@@ -10,13 +10,13 @@ const SEVS = ["critical", "high", "medium", "low"] as const;
 /** Proportional severity strip + counts — reads like an instrument, not a list of chips. */
 export function SeverityStrip({ counts, className }: { counts?: Record<string, number>; className?: string }) {
   const total = SEVS.reduce((s, k) => s + (counts?.[k] ?? 0), 0);
-  if (!total) return <span className={cx("text-[13px] text-clear", className)}>No issues</span>;
+  if (!total) return <span className={cx("text-[14px] text-clear", className)}>No issues</span>;
   return (
     <div className={cx("min-w-0", className)}>
       <div className="flex h-2 w-full max-w-[180px] gap-[2px] overflow-hidden rounded-full bg-[#e7e9e2]">
         {SEVS.map((s) => (counts?.[s] ? <span key={s} className={sevBg(s)} style={{ width: `${((counts[s] ?? 0) / total) * 100}%` }} /> : null))}
       </div>
-      <div className="mt-1.5 flex flex-wrap gap-x-3 text-[12.5px] text-mute">
+      <div className="mt-1.5 flex flex-wrap gap-x-3 text-[14.5px] text-mute">
         {SEVS.map((s) =>
           counts?.[s] ? (
             <span key={s} className="tnum">
@@ -55,11 +55,11 @@ export function RunsTable({ runs }: { runs: RunRow[] }) {
               <StatusBadge s={r.status} />
               <div className="min-w-0">
                 <div className="truncate text-[14px] font-medium">{r.moduleName ?? "Whole product"}</div>
-                <div className="truncate text-[12.5px] text-mute">{r.suites.map((s) => SUITES.find((x) => x.id === s)?.label).join(", ")}</div>
+                <div className="truncate text-[14.5px] text-mute">{r.suites.map((s) => SUITES.find((x) => x.id === s)?.label).join(", ")}</div>
               </div>
-              {running ? <span className="text-[13px] text-signal-ink">Testing…</span> : <SeverityStrip counts={r.stats.bySeverity} />}
+              {running ? <span className="text-[14px] text-signal-ink">Testing…</span> : <SeverityStrip counts={r.stats.bySeverity} />}
               <Gauge score={r.healthScore} size="sm" />
-              <div className="text-[13px] text-mute">
+              <div className="text-[14px] text-mute">
                 <div>{timeAgo(r.createdAt)}</div>
                 <div className="text-[12px] text-faint capitalize">{r.trigger === "webhook" ? "From CI" : r.trigger}</div>
               </div>

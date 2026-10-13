@@ -11,8 +11,8 @@ const ICON = { ui: Globe, visual: PenTool, api: Server, ai: Bot } as const;
 
 /** Warns when a suite has nothing configured to test. */
 function readiness(s: Suite, project: Project, mods: Module[]): string | null {
-  if (s === "visual" && (!project.figmaFileKey || !project.hasFigmaToken)) return "add the Figma file and token in Settings";
-  if (s === "visual" && !mods.some((m) => m.figmaFrames.length)) return "link Figma frames to a module";
+  if (s === "visual" && !project.referenceUrl && !(project.figmaFileKey && project.hasFigmaToken)) return "add a reference website or Figma file in Settings";
+  if (s === "visual" && !mods.some((m) => m.figmaFrames.length)) return "link pages to the design in a module";
   if (s === "api" && !project.openApiUrl) return "add the OpenAPI spec link in Settings";
   if (s === "ai" && !mods.some((m) => m.aiEvalTarget?.url)) return "set up an AI endpoint and eval cases in a module";
   return null;
@@ -65,7 +65,7 @@ export function RunDialog({
           </Select>
         </Field>
         <div>
-          <div className="mb-2 text-[13px] font-medium">Checks to run</div>
+          <div className="mb-2 text-[14px] font-medium">Checks to run</div>
           <div className="grid gap-2 sm:grid-cols-2">
             {SUITES.map((s) => {
               const on = suites.includes(s.id);
@@ -87,7 +87,7 @@ export function RunDialog({
                   </span>
                   <span className={cx("grid size-8 place-items-center rounded-[10px]", !on ? "bg-soft text-faint" : s.id === "ai" ? "bg-ai-wash text-ai" : "bg-signal-wash text-signal-ink")}><Icon size={17} /></span>
                   <span className={cx("display mt-3 text-[16px] font-bold tracking-[-0.01em]", on ? "text-ink" : "text-mute")}>{s.label}</span>
-                  <span className="mt-0.5 text-[12.5px] leading-snug text-mute">{s.hint}</span>
+                  <span className="mt-0.5 text-[14.5px] leading-snug text-mute">{s.hint}</span>
                   {on && warn && <span className="mt-2 text-[12px] leading-snug text-signal-ink">Skipped until you {warn}</span>}
                 </button>
               );
@@ -96,7 +96,7 @@ export function RunDialog({
         </div>
         <ErrorNote error={error} />
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[12.5px] text-mute">Results stream in live. The report saves when the run ends.</span>
+          <span className="text-[14.5px] text-mute">Results stream in live. The report saves when the run ends.</span>
           <div className="flex gap-2">
             <Button onClick={onClose}>Cancel</Button>
             <Button variant="primary" onClick={start} loading={busy} disabled={!suites.length}>

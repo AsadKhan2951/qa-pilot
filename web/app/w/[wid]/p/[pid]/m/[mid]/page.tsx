@@ -17,10 +17,10 @@ function Block({ id, icon, title, desc, ready, children }: { id: string; icon: R
           <span className={cx("grid size-9 shrink-0 place-items-center rounded-[12px]", id === "ai" ? "bg-ai-wash text-ai" : "bg-signal-wash text-signal-ink")}>{icon}</span>
           <div className="min-w-0 flex-1">
             <h2 className="text-[19px] font-bold tracking-[-0.02em]">{title}</h2>
-            <p className="mt-0.5 max-w-[72ch] text-[13px] text-mute">{desc}</p>
+            <p className="mt-0.5 max-w-[72ch] text-[14px] text-mute">{desc}</p>
           </div>
           {ready !== undefined && (
-            <span className={cx("mt-0.5 shrink-0 text-[12.5px] font-medium", ready ? "text-clear" : "text-faint")}>{ready ? "Ready" : "Not set up"}</span>
+            <span className={cx("mt-0.5 shrink-0 text-[14.5px] font-medium", ready ? "text-clear" : "text-faint")}>{ready ? "Ready" : "Not set up"}</span>
           )}
         </div>
         <div className="px-6 py-5">{children}</div>
@@ -93,7 +93,9 @@ export default function ModulePage() {
         description: m.description,
         paths: paths.split("\n").map((p) => p.trim()).filter(Boolean).map((p) => (p.startsWith("/") || p.startsWith("http") ? p : `/${p}`)),
         userFlows: m.userFlows,
-        figmaFrames: frames.filter((f) => f.path && f.nodeId).map((f) => ({ ...f, nodeId: parseNode(f.nodeId) })),
+        figmaFrames: frames
+          .filter((f) => f.path && (f.nodeId || f.source === "site"))
+          .map((f) => (f.source === "site" ? { ...f, nodeId: f.nodeId.trim() || f.path } : { ...f, source: "figma" as const, nodeId: parseNode(f.nodeId) })),
         apiScopes: scopes.split(/[,\n]/).map((s) => s.trim()).filter(Boolean),
         aiEvalTarget: { ...target, headers: parsedHeaders },
       };
@@ -134,7 +136,7 @@ export default function ModulePage() {
   const outline = [
     { id: "overview", label: "Overview" },
     { id: "frontend", label: "Frontend", ready: true },
-    { id: "figma", label: "Figma match", ready: frames.some((f) => f.path && f.nodeId) },
+    { id: "figma", label: "Design match", ready: frames.some((f) => f.path && (f.nodeId || f.source === "site")) },
     { id: "api", label: "API", ready: Boolean(scopes.trim()) },
     { id: "ai", label: "AI answers", ready: Boolean(target.url) && evalCases.length > 0 },
   ];
@@ -180,7 +182,7 @@ export default function ModulePage() {
           <ol className="sticky top-6 space-y-0.5 border-l border-line">
             {outline.map((o) => (
               <li key={o.id}>
-                <a href={`#${o.id}`} className="-ml-px flex items-center justify-between gap-2 border-l-2 border-transparent py-1.5 pr-2 pl-3.5 text-[13.5px] text-mute hover:border-signal hover:text-ink">
+                <a href={`#${o.id}`} className="-ml-px flex items-center justify-between gap-2 border-l-2 border-transparent py-1.5 pr-2 pl-3.5 text-[14.5px] text-mute hover:border-signal hover:text-ink">
                   {o.label}
                   {o.ready !== undefined && <span className={cx("size-1.5 rounded-full", o.ready ? "bg-clear" : "bg-[#d3d7cc]")} />}
                 </a>
@@ -205,7 +207,7 @@ export default function ModulePage() {
         <Block id="frontend" ready={true} icon={<Globe size={17} />} title="Frontend" desc="Each page is checked for errors, broken data, dead links, accessibility, mobile layout and speed. Then the AI tester walks through your flows.">
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Pages to test" hint={`One path per line, relative to ${project.data.baseUrl}. Leave empty to auto-discover.`}>
-              <Textarea className="font-mono text-[13px]" rows={7} value={paths} onChange={(e) => setPaths(e.target.value)} placeholder={"/dashboard\n/leave/apply\n/leave/history"} />
+              <Textarea className="font-mono text-[14px]" rows={7} value={paths} onChange={(e) => setPaths(e.target.value)} placeholder={"/dashboard\n/leave/apply\n/leave/history"} />
             </Field>
             <Field label="User flows for the AI agent" hint="One flow per line, in plain English or Roman Urdu.">
               <Textarea
@@ -218,24 +220,76 @@ export default function ModulePage() {
           </div>
         </Block>
 
-        <Block id="figma" ready={frames.some((f) => f.path && f.nodeId)} icon={<PenTool size={17} />} title="Figma match" desc="Link each page to its Figma frame. Every difference in text, font, colour, spacing or position comes back marked on a side-by-side screenshot.">
-          {!project.data.figmaFileKey && <p className="mb-4 rounded-[7px] border border-[#ffd0bf] bg-signal-wash px-3 py-2 text-[13px] text-signal-ink">Connect the Figma file and token in the product settings first.</p>}
-          <div className="space-y-2">
-            {frames.map((f, i) => (
-              <div key={i} className="grid grid-cols-[1fr_1.4fr_1fr_auto] gap-2">
-                <Input placeholder="/dashboard" value={f.path} onChange={(e) => setFrame(i, { path: e.target.value })} />
-                <Input placeholder="Figma frame link or node id (12:34)" value={f.nodeId} onChange={(e) => setFrame(i, { nodeId: e.target.value })} />
-                <Input placeholder="Label (optional)" value={f.label ?? ""} onChange={(e) => setFrame(i, { label: e.target.value })} />
-                <Button variant="ghost" onClick={() => set("figmaFrames", frames.filter((_, j) => j !== i))}>
-                  <X size={15} />
-                </Button>
-              </div>
-            ))}
+        <Block
+          id="figma"
+          ready={frames.some((f) => f.path && (f.nodeId || f.source === "site"))}
+          icon={<PenTool size={17} />}
+          title="Design match"
+          desc="Link each page to its approved design: a Figma frame or a page on your reference website. Every difference in text, font, colour, spacing or position comes back marked on a side-by-side screenshot."
+        >
+          {!project.data.referenceUrl && !project.data.figmaFileKey && (
+            <p className="mb-4 rounded-[12px] border border-[#ffd0bf] bg-signal-wash px-3.5 py-2.5 text-[14.5px] text-signal-ink">
+              Add a reference website or a Figma file in the product settings first.
+            </p>
+          )}
+          <div className="space-y-3">
+            {frames.map((f, i) => {
+              const source = f.source ?? "figma";
+              return (
+                <div key={i} className="rounded-[16px] border border-line bg-soft/50 p-3">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <div className="flex rounded-full border border-line bg-panel p-1" role="radiogroup" aria-label="Design source">
+                      {(
+                        [
+                          ["site", "Reference website"],
+                          ["figma", "Figma frame"],
+                        ] as const
+                      ).map(([id, text]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          role="radio"
+                          aria-checked={source === id}
+                          onClick={() => setFrame(i, { source: id })}
+                          className={cx("rounded-full px-3 py-1 text-[14px] font-semibold transition-colors", source === id ? "bg-ink text-white" : "text-mute hover:text-ink")}
+                        >
+                          {text}
+                        </button>
+                      ))}
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => set("figmaFrames", frames.filter((_, j) => j !== i))} aria-label="Remove">
+                      <X size={15} />
+                    </Button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-[1fr_1.3fr_0.9fr]">
+                    <Field label="Page in your app">
+                      <Input placeholder="/dashboard" value={f.path} onChange={(e) => setFrame(i, { path: e.target.value })} />
+                    </Field>
+                    <Field label={source === "site" ? "Same page on the reference site" : "Figma frame"}>
+                      <Input
+                        placeholder={source === "site" ? "Empty = same path, or a full link" : "Frame link or node id (12:34)"}
+                        value={f.nodeId}
+                        onChange={(e) => setFrame(i, { nodeId: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Name (optional)">
+                      <Input placeholder="Dashboard" value={f.label ?? ""} onChange={(e) => setFrame(i, { label: e.target.value })} />
+                    </Field>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <Button size="sm" className="mt-3" onClick={() => set("figmaFrames", [...frames, { path: "", nodeId: "" }])}>
-            <Plus size={14} /> Add frame
+          <Button
+            size="sm"
+            className="mt-3"
+            onClick={() => set("figmaFrames", [...frames, { path: "", nodeId: "", source: project.data!.referenceUrl ? "site" : "figma" }])}
+          >
+            <Plus size={14} /> Link a page
           </Button>
-          <p className="mt-2 text-xs text-mute">Tip: in Figma, right-click the frame → Copy link to selection, and paste it here.</p>
+          <p className="mt-2 text-[14px] text-mute">
+            Reference website: write the page path on that site, e.g. <span className="font-mono">/dashboard</span>, or paste a full link. Figma: right-click the frame, Copy link to selection, paste it here.
+          </p>
         </Block>
 
         <Block id="api" ready={Boolean(scopes.trim())} icon={<Server size={17} />} title="API" desc="Pick the endpoints from your OpenAPI spec that belong to this module. Each one is tested for its contract, auth, bad input, server errors and speed.">
@@ -281,13 +335,13 @@ export default function ModulePage() {
             </div>
           </div>
           <div className="mt-3 divide-y divide-line rounded-[16px] border border-line">
-            {!evalCases.length && <div className="p-4 text-center text-[13px] text-mute">No test questions yet. Add a few, or let AI draft them from the module description.</div>}
+            {!evalCases.length && <div className="p-4 text-center text-[14px] text-mute">No test questions yet. Add a few, or let AI draft them from the module description.</div>}
             {evalCases.map((c) => (
               <div key={c.id} className="flex items-start gap-3 p-3">
                 <button className="min-w-0 flex-1 text-left" onClick={() => setCaseEdit(c)}>
                   <div className="text-[14px] font-medium">{c.name}</div>
-                  <div className="truncate text-[12.5px] text-mute">Asks: {c.input}</div>
-                  <div className="truncate text-[12.5px] text-mute">Passes if: {c.criteria}</div>
+                  <div className="truncate text-[14.5px] text-mute">Asks: {c.input}</div>
+                  <div className="truncate text-[14.5px] text-mute">Passes if: {c.criteria}</div>
                 </button>
                 <Button
                   variant="ghost"
@@ -367,7 +421,7 @@ export default function ModulePage() {
       <Modal open={Boolean(generated)} onClose={() => setGenerated(null)} title="Drafted test questions" wide>
         {generated && (
           <>
-            <p className="mb-3 text-[13px] text-mute">Untick anything that doesn't fit, then save the rest.</p>
+            <p className="mb-3 text-[14px] text-mute">Untick anything that doesn't fit, then save the rest.</p>
             <div className="scroll-thin max-h-[55vh] space-y-2 overflow-y-auto pr-1">
               {generated.map((c, i) => (
                 <label key={i} className="flex cursor-pointer gap-3 rounded-[8px] border border-line p-3 hover:bg-soft">
@@ -377,7 +431,7 @@ export default function ModulePage() {
                     checked={c.keep}
                     onChange={() => setGenerated(generated.map((g, j) => (j === i ? { ...g, keep: !g.keep } : g)))}
                   />
-                  <div className="min-w-0 text-[13px]">
+                  <div className="min-w-0 text-[14px]">
                     <div className="font-medium">{c.name}</div>
                     <div className="text-mute">
                       <b className="font-medium text-ink">Input:</b> {c.input}
