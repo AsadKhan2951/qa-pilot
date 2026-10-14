@@ -33,14 +33,23 @@ export async function askJson<T>(opts: {
   maxTokens?: number;
 }): Promise<T> {
   const name = opts.name ?? "submit_result";
-  const res = await claude().messages.create({
-    model: opts.model ?? env.claudeModel,
-    max_tokens: opts.maxTokens ?? 4096,
-    system: opts.system,
-    tools: [{ name, description: "Submit the result.", input_schema: opts.schema as Anthropic.Messages.Tool.InputSchema }],
-    tool_choice: { type: "tool", name },
-    messages: [{ role: "user", content: opts.content }],
-  });
+  const call = (forced: boolean) =>
+    claude().messages.create({
+      model: opts.model ?? env.claudeModel,
+      max_tokens: opts.maxTokens ?? 4096,
+      system: forced ? opts.system : `${opts.system}\n\nAlways answer by calling the ${name} tool exactly once.`,
+      tools: [{ name, description: "Submit the result.", input_schema: opts.schema as Anthropic.Messages.Tool.InputSchema }],
+      tool_choice: forced ? { type: "tool", name } : { type: "auto" },
+      messages: [{ role: "user", content: opts.content }],
+    });
+  let res: Anthropic.Messages.Message;
+  try {
+    res = await call(true);
+  } catch (e) {
+    // Some models (e.g. with extended thinking) reject a forced tool_choice
+    if (!/tool_choice/i.test((e as Error).message)) throw e;
+    res = await call(false);
+  }
   const block = res.content.find((b) => b.type === "tool_use");
   if (!block || block.type !== "tool_use") throw new Error("Claude did not return structured output");
   return block.input as T;
