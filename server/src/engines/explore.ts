@@ -98,7 +98,21 @@ export async function mapModule(ctx: RunContext, page: Page, startUrl: string, w
   const origin = start.origin;
   const scope = start.pathname.replace(/\/+$/, "") || "/";
   const keepSearch = start.search; // e.g. "?loading" on prototypes — carried to every page
-  const inScope = (u: URL) => u.origin === origin && (u.pathname === scope || u.pathname.startsWith(scope === "/" ? "/" : scope + "/"));
+  // A module's screens don't always sit under its main page (e.g. /marketplace/funnel-builder
+  // opens /projects/x/funnels/y). Keep: pages under any scope root, plus links whose path
+  // mentions the module's keyword ("funnel"), plus detail pages opened by clicking a row.
+  const roots = [scope];
+  const keywords = (scope.split("/").pop() ?? "")
+    .split(/[-_]/)
+    .map((w) => w.toLowerCase().replace(/s$/, ""))
+    .filter((w) => w.length >= 4 && !/^(dashboard|builder|manager|settings|page|list|admin)$/.test(w));
+  const under = (p: string, r: string) => p === r || p.startsWith(r === "/" ? "/" : r + "/");
+  const inScope = (u: URL) => u.origin === origin && roots.some((r) => under(u.pathname, r));
+  const related = (u: URL) => u.origin === origin && keywords.some((k) => u.pathname.toLowerCase().includes(k));
+  const addRoot = (u: URL) => {
+    const p = u.pathname.replace(/\/+$/, "") || "/";
+    if (!roots.some((r) => under(p, r))) roots.push(p);
+  };
   const norm = (u: URL) => {
     const v = new URL(u.pathname + keepSearch, origin);
     return v;
@@ -110,6 +124,7 @@ export async function mapModule(ctx: RunContext, page: Page, startUrl: string, w
   const pages: MappedPage[] = [];
 
   const enqueue = (u: URL) => {
+    if (!inScope(u) && related(u) && roots.length < 6) addRoot(u);
     if (!inScope(u) || /logout|signout|sign-out|\.(pdf|zip|png|jpe?g|svg)$/i.test(u.pathname)) return;
     const n = norm(u);
     const key = pathOf(n);
@@ -151,7 +166,9 @@ export async function mapModule(ctx: RunContext, page: Page, startUrl: string, w
         await page.waitForTimeout(1500);
         if (page.url() !== before) {
           try {
-            enqueue(new URL(page.url()));
+            const detail = new URL(page.url());
+            if (detail.origin === origin) addRoot(detail);
+            enqueue(detail);
           } catch {
             /* ignore */
           }
