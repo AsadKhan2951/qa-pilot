@@ -8,6 +8,7 @@ import { checkPage } from "./checks.js";
 import { runAgent } from "./agent.js";
 import { recordTraffic } from "./traffic.js";
 import { watchContext } from "./live.js";
+import { getModuleMap, planFlows, type MappedPage, type PlannedFlow } from "./explore.js";
 
 export async function newContext(ctx: RunContext, viewport = { width: 1440, height: 900 }): Promise<BrowserContext> {
   const context = await ctx.browser.newContext({
@@ -125,11 +126,24 @@ export async function runUiSuite(ctx: RunContext, mod: Module): Promise<void> {
   if (!mod.paths.length && mod.id) {
     const siblings = await col.modules.count({ projectId: mod.projectId, _id: { $ne: mod.id }, "paths.0": { $exists: true } });
     if (siblings) {
-      await ctx.log(`No pages listed for "${mod.name}" — add pages to test its interface`, "warn");
+      await ctx.log(`No main page set for "${mod.name}" — add its main page so QA can explore it`, "warn");
       return;
     }
   }
-  const paths = mod.paths.length ? mod.paths : await discoverPaths(ctx);
+  const listed = mod.paths.length ? mod.paths : await discoverPaths(ctx);
+  const startPath = listed[0] ?? "/";
+
+  // Auto-explore: only the main page is needed — every other screen is found here
+  let mapped: MappedPage[] = [];
+  if (aiEnabled()) {
+    try {
+      mapped = await getModuleMap(ctx, mod, startPath);
+    } catch (e) {
+      await ctx.log(`Could not explore "${mod.name}": ${(e as Error).message}`, "warn");
+    }
+  }
+  const paths = [...new Set([...listed, ...mapped.map((p) => p.path)])];
+
   const context = await newContext(ctx);
   const page: Page = await context.newPage();
   const monitor = new PageMonitor(page);
@@ -144,27 +158,47 @@ export async function runUiSuite(ctx: RunContext, mod: Module): Promise<void> {
       return;
     }
 
-    const flows = mod.userFlows
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean);
-    const startPath = paths[0] ?? "/";
-    await page.goto(ctx.url(startPath), { waitUntil: "domcontentloaded", timeout: 45000 }).catch(() => {});
-    monitor.drain(); // already reported by checkPage
+    const extra = mod.description ? `Module description: ${mod.description}` : undefined;
 
-    const goal = flows.length
-      ? `Test module "${mod.name}" (${mod.mvp}). Verify each of these user flows works end-to-end, including edge cases and validation:\n${flows.map((f, i) => `${i + 1}. ${f}`).join("\n")}`
-      : `Explore and test module "${mod.name}" (${mod.mvp}) thoroughly. Pages in scope: ${paths.join(", ")}. ` +
-        `Click every button, open every tab/modal, submit every form with valid and invalid data, and check all states.`;
+    // Claude plans the full set of flows from the map (plus any flows the team wrote)
+    let flows: PlannedFlow[] = [];
+    try {
+      flows = await planFlows(ctx, mod, mapped);
+    } catch (e) {
+      await ctx.log(`Flow planning failed: ${(e as Error).message}`, "warn");
+    }
+    if (!flows.length) {
+      flows = mod.userFlows
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((l) => ({ title: l.slice(0, 80), startPath, steps: l }));
+    }
+    if (!flows.length) {
+      flows = [
+        {
+          title: "Explore everything",
+          startPath,
+          steps: `Pages in scope: ${paths.join(", ")}. Click every button, open every tab/modal, submit every form with valid and invalid data, and check all states.`,
+        },
+      ];
+    }
+    await ctx.log(`Testing ${flows.length} flow(s) in "${mod.name}": ${flows.map((f) => f.title).join(" · ")}`);
 
-    await ctx.log(`AI agent testing "${mod.name}"…`);
-    const result = await runAgent(ctx, page, {
-      moduleId: mod.id,
-      goal,
-      context: mod.description ? `Module description: ${mod.description}` : undefined,
-      monitor,
-    });
-    await ctx.log(`AI agent finished "${mod.name}" in ${result.steps} steps: ${result.summary}`, result.success ? "success" : "warn");
+    // One agent run per flow, each with its own full step budget
+    for (const [i, flow] of flows.entries()) {
+      await ctx.checkCancelled();
+      await page.goto(ctx.url(flow.startPath), { waitUntil: "domcontentloaded", timeout: 45000 }).catch(() => {});
+      monitor.drain(); // already reported by checkPage
+      await ctx.log(`Flow ${i + 1}/${flows.length}: ${flow.title}`);
+      const result = await runAgent(ctx, page, {
+        moduleId: mod.id,
+        goal: `Module "${mod.name}"${mod.mvp ? ` (${mod.mvp})` : ""}. Test this ONE flow end-to-end, including validation and edge cases, then call finish.\nFlow: ${flow.title}\n${flow.steps}`,
+        context: extra,
+        monitor,
+      });
+      await ctx.log(`Flow ${i + 1} done in ${result.steps} steps: ${result.summary}`, result.success ? "success" : "warn");
+    }
   } finally {
     await context.close();
   }

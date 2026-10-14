@@ -206,10 +206,10 @@ export default function ModulePage() {
 
         <Block id="frontend" ready={true} icon={<Globe size={17} />} title="Frontend" desc="Each page is checked for errors, broken data, dead links, accessibility, mobile layout and speed. Then the AI tester walks through your flows.">
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Pages to test" hint={`One path per line, relative to ${project.data.baseUrl}. Leave empty to auto-discover.`}>
-              <Textarea className="font-mono text-[14px]" rows={7} value={paths} onChange={(e) => setPaths(e.target.value)} placeholder={"/dashboard\n/leave/apply\n/leave/history"} />
+            <Field label="Main page" hint={`Just the module's main page (e.g. /dashboard/funnels). AI explores every screen, tab and wizard from here and plans the flows itself. Add more lines only for pages it can't reach.`}>
+              <Textarea className="font-mono text-[14px]" rows={7} value={paths} onChange={(e) => setPaths(e.target.value)} placeholder={"/dashboard/funnels"} />
             </Field>
-            <Field label="User flows for the AI agent" hint="One flow per line, in plain English or Roman Urdu.">
+            <Field label="Must-test flows (optional)" hint="AI already plans the full flow list itself. Add a line only for something it must not miss.">
               <Textarea
                 rows={7}
                 value={m.userFlows}

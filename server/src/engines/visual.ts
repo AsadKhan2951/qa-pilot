@@ -4,6 +4,7 @@
  * 3) Claude vision reviews both and lists each real mismatch with a region,
  *    and every mismatch becomes a bug with an annotated side-by-side screenshot.
  */
+import { getModuleMap, mapModule, openReference, pairWithReference, type MappedPage } from "./explore.js";
 import sharp from "sharp";
 import pixelmatch from "pixelmatch";
 import type { Module, FigmaFrame } from "../db/schema.js";
@@ -253,8 +254,43 @@ async function loadSiteReference(ctx: RunContext, frame: FigmaFrame, width = 144
   }
 }
 
+/**
+ * With a reference website, the team only gives the module's main page: QA Pilot
+ * explores both the app and the reference from there and pairs matching screens.
+ */
+async function autoReferenceFrames(ctx: RunContext, mod: Module, explicit: FigmaFrame[]): Promise<FigmaFrame[]> {
+  const appStart = mod.paths[0];
+  if (!ctx.project.referenceUrl || !appStart || !aiEnabled()) return [];
+  const appPages = await getModuleMap(ctx, mod, appStart);
+  if (appPages.length <= 1 && explicit.length) return [];
+
+  const startFrame = explicit.find((f) => f.source === "site" && f.path === appStart) ?? explicit.find((f) => f.source === "site");
+  const refStart = startFrame ? referenceUrl(ctx, startFrame) : new URL(appStart, ctx.project.referenceUrl).toString();
+  await ctx.log(`Exploring the reference website from ${new URL(refStart).pathname}…`);
+  const { context, page } = await openReference(ctx, refStart);
+  let refPages: MappedPage[];
+  try {
+    refPages = await mapModule(ctx, page, page.url(), "reference");
+  } finally {
+    await context.close();
+  }
+  const pairs = await pairWithReference(appPages, refPages);
+  const taken = new Set(explicit.map((f) => f.path));
+  const auto = pairs
+    .filter((p) => !taken.has(p.appPath))
+    .slice(0, Math.max(0, 10 - explicit.length))
+    .map((p) => ({ path: p.appPath, nodeId: p.refUrl, label: p.label, source: "site" as const }));
+  await ctx.log(`Matched ${auto.length} screen(s) with the reference: ${auto.map((f) => f.label).join(", ") || "none"}`, auto.length ? "success" : "warn");
+  return auto;
+}
+
 export async function runVisualSuite(ctx: RunContext, mod: Module) {
-  const frames = (mod.figmaFrames ?? []) as FigmaFrame[];
+  const frames = [...((mod.figmaFrames ?? []) as FigmaFrame[])];
+  try {
+    frames.push(...(await autoReferenceFrames(ctx, mod, frames)));
+  } catch (e) {
+    await ctx.log(`Could not auto-match screens with the reference website: ${(e as Error).message}`, "warn");
+  }
   if (!frames.length) return ctx.log(`No design references linked for "${mod.name}" — skipping design match`, "warn");
 
   for (const frame of frames) {

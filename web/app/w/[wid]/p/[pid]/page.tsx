@@ -16,8 +16,8 @@ type Tab = "modules" | "runs" | "settings";
 /** What QA Pilot will be able to check in a module — filled = configured. */
 function Coverage({ m, autoPages }: { m: Module; autoPages: boolean }) {
   const items = [
-    { on: m.paths.length > 0 || autoPages, icon: Globe, label: m.paths.length ? `${m.paths.length} page${m.paths.length === 1 ? "" : "s"}` : autoPages ? "Auto pages" : "No pages" },
-    { on: Boolean(m.userFlows.trim()), icon: ListChecks, label: m.userFlows.trim() ? `${m.userFlows.trim().split("\n").length} flows` : "No flows" },
+    { on: m.paths.length > 0 || autoPages, icon: Globe, label: m.paths.length ? "AI explores" : autoPages ? "Auto pages" : "No main page" },
+    { on: true, icon: ListChecks, label: m.userFlows.trim() ? `AI flows + ${m.userFlows.trim().split("\n").length}` : "AI plans flows" },
     { on: m.figmaFrames.length > 0, icon: PenTool, label: m.figmaFrames.length ? `${m.figmaFrames.length} design ref${m.figmaFrames.length === 1 ? "" : "s"}` : "No design ref" },
     { on: true, icon: Server, label: m.apiScopes.length ? `API: ${m.apiScopes.join(", ")}` : "API auto" },
     { on: Boolean(m.aiEvalTarget?.url), icon: Bot, label: m.aiEvalTarget?.url ? "AI evals" : "No AI evals" },

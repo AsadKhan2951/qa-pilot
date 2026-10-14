@@ -36,6 +36,8 @@ export class RunContext {
   traffic = new Map<string, import("./traffic.js").Recorded>();
   trafficTested = new Set<string>();
   currentModuleId: string | null = null;
+  /** Screens found by auto-explore, per module (see engines/explore.ts). */
+  moduleMaps = new Map<string, import("./explore.js").MappedPage[]>();
   /** What each live-view browser is doing right now (shown under the frame). */
   liveCaption: Record<string, string> = {};
   storageState: Awaited<ReturnType<import("playwright").BrowserContext["storageState"]>> | undefined;
